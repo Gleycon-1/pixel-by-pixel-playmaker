@@ -3,7 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireCustomer } from "./session.server";
 import { quoteDelivery } from "./geo.server";
-import { calcChange, usableCashback } from "./rules";
+import { applyFreeDelivery, calcChange, isStoreOpenNow, usableCashback } from "./rules";
 import { createPixOrder, fetchMpOrder } from "./mercadopago.server";
 import { markOrderPaid, refundCashbackIfNeeded } from "./orders.server";
 import { addressSchema } from "./schemas";
@@ -51,7 +51,7 @@ export const placeOrder = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const customer = await requireCustomer(data.token);
     const s = await loadSettings();
-    if (!s.store_open) throw new Error("A loja está fechada no momento.");
+    if (!isStoreOpenNow(s.store_mode, s.open_time, s.close_time)) throw new Error("A loja está fechada no momento.");
     if (data.paymentMethod === "pix" && !s.accept_pix) throw new Error("Pix indisponível no momento.");
     if (data.paymentMethod === "card" && !s.accept_card) throw new Error("Maquininha indisponível no momento.");
     if (data.paymentMethod === "cash" && !s.accept_cash) throw new Error("Dinheiro indisponível no momento.");
@@ -60,12 +60,13 @@ export const placeOrder = createServerFn({ method: "POST" })
 
     // Itens: preço sempre do banco
     const ids = [...new Set(data.items.map((i) => i.productId))];
-    const { data: prods } = await supabaseAdmin.from("products").select("id,name,price_cents,available").in("id", ids);
+    const { data: prods } = await supabaseAdmin.from("products").select("id,name,price_cents,available,stock").in("id", ids);
     const byId = new Map((prods ?? []).map((p) => [p.id, p]));
     const lines = data.items.map((i) => {
       const p = byId.get(i.productId);
       if (!p) throw new Error("Um item do carrinho não existe mais.");
       if (!p.available) throw new Error(`"${p.name}" está esgotado.`);
+      if (p.stock != null && p.stock < i.qty) throw new Error(`Só temos ${p.stock} un. de "${p.name}" em estoque.`);
       return { product_id: p.id, name: p.name, unit_price_cents: p.price_cents, quantity: i.qty };
     });
     const subtotal = lines.reduce((a, l) => a + l.unit_price_cents * l.quantity, 0);
@@ -96,7 +97,7 @@ export const placeOrder = createServerFn({ method: "POST" })
           `Seu endereço fica a ${q.distanceKm.toFixed(1).replace(".", ",")} km — acima do nosso raio de ${q.maxKm} km. Escolha "Retirar na loja".`,
         );
       }
-      fee = q.feeCents;
+      fee = applyFreeDelivery(q.feeCents, subtotal, s.free_delivery_min_cents);
       distanceKm = q.distanceKm;
       billedKm = q.billedKm;
       address = { ...addr, lat: q.lat, lng: q.lng };
@@ -145,6 +146,7 @@ export const placeOrder = createServerFn({ method: "POST" })
         cash_change_for_cents: changeFor,
         change_due_cents: changeDue,
         notes: data.notes || null,
+        eta_minutes: s.eta_minutes,
         paid_at: !isPix && data.paymentMethod === "pix" ? new Date().toISOString() : null,
       })
       .select("id, code")
@@ -155,6 +157,7 @@ export const placeOrder = createServerFn({ method: "POST" })
       throw new Error("Não foi possível registrar o pedido.");
     }
     await supabaseAdmin.from("order_items").insert(lines.map((l) => ({ ...l, order_id: order.id })));
+    await Promise.all(lines.map((l) => supabaseAdmin.rpc("decrement_stock", { p_product: l.product_id, p_qty: l.quantity })));
 
     if (isPix) {
       try {

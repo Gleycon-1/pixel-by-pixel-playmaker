@@ -41,9 +41,42 @@ export function calcDeliveryFee(distanceKm: number, s: FreightSettings): Freight
   return { ok: true, distanceKm, billedKm, extraKm, feeCents };
 }
 
-/** 2% do subtotal dos produtos (sem frete), arredondado para baixo em centavos. */
-export function calcCashback(subtotalCents: number) {
-  return Math.floor(subtotalCents * CASHBACK_RATE);
+/** % do subtotal dos produtos (sem frete), arredondado para baixo em centavos. Padrão 2%. */
+export function calcCashback(subtotalCents: number, percent: number = CASHBACK_RATE * 100) {
+  return Math.floor((subtotalCents * Math.max(0, percent)) / 100);
+}
+
+/** Frete grátis quando o subtotal atinge o mínimo configurado (0 = desligado). */
+export function applyFreeDelivery(feeCents: number, subtotalCents: number, minCents: number) {
+  return minCents > 0 && subtotalCents >= minCents ? 0 : feeCents;
+}
+
+/** Loja aberta? "auto" usa o horário (HH:MM, aceita virar a meia-noite) no fuso de São Paulo. */
+export function isStoreOpenNow(
+  mode: string,
+  openTime: string,
+  closeTime: string,
+  now: Date = new Date(),
+): boolean {
+  if (mode === "open") return true;
+  if (mode === "closed") return false;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  const cur = h * 60 + m;
+  const toMin = (t: string) => {
+    const [a, b] = t.split(":").map(Number);
+    return (a ?? 0) * 60 + (b ?? 0);
+  };
+  const o = toMin(openTime);
+  const c = toMin(closeTime);
+  if (o === c) return true;
+  return o < c ? cur >= o && cur < c : cur >= o || cur < c;
 }
 
 /** Quanto do saldo pode ser usado: nunca mais que o subtotal dos produtos. */

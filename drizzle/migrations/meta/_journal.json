@@ -8,6 +8,13 @@
       "when": 1794788747304,
       "tag": "0000_adega_core_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794869755835,
+      "tag": "0001_admin_pdv_eta_cashback",
+      "breakpoints": true
     }
   ]
 }

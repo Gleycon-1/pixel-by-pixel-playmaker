@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { catalogQuery } from "@/lib/catalog.functions";
 import { placeOrder, quoteFreight } from "@/lib/checkout.functions";
 import { money, parseMoneyInput } from "@/lib/format";
-import { calcChange, usableCashback } from "@/lib/rules";
+import { calcChange, usableCashback, applyFreeDelivery } from "@/lib/rules";
 import { cartTotals, useCart } from "@/stores/cart";
 import { useHydrated } from "@/stores/hydration";
 import { useMe } from "@/hooks/use-customer";
@@ -119,7 +119,8 @@ function CartPage() {
     staleTime: 5 * 60_000,
   });
 
-  const fee = fulfillment === "delivery" && quote.data?.ok ? quote.data.feeCents : 0;
+  const rawFee = fulfillment === "delivery" && quote.data?.ok ? quote.data.feeCents : 0;
+  const fee = applyFreeDelivery(rawFee, subtotal, settings.free_delivery_min_cents);
   const balance = me?.customer.cashback_cents ?? 0;
   const cashbackUsed = useCb ? usableCashback(balance, subtotal) : 0;
   const total = subtotal + fee - cashbackUsed;
@@ -291,7 +292,7 @@ function CartPage() {
                     <span>
                       📍 {quote.data.distanceKm.toFixed(1).replace(".", ",")} km (cobrado {quote.data.billedKm} km)
                     </span>
-                    <span className="font-extrabold text-success">{money(quote.data.feeCents)}</span>
+                    <span className="font-extrabold text-success">{fee === 0 ? "GRÁTIS" : money(fee)}</span>
                   </div>
                 )}
                 {quote.data && !quote.isFetching && !quote.data.ok && (
@@ -387,7 +388,11 @@ function CartPage() {
               <span>Total</span>
               <span className="text-primary">{money(total)}</span>
             </div>
-            <p className="pt-1 text-xs text-muted-foreground">Você ganha 2% de cashback sobre os produtos quando o pedido for entregue.</p>
+            <p className="pt-1 text-xs text-muted-foreground">Você ganha {String(settings.cashback_percent).replace(".", ",")}% de cashback sobre os produtos quando o pedido for entregue.</p>
+            {fulfillment === "delivery" && <p className="text-xs font-semibold text-accent">🛵 Entrega em até {settings.eta_minutes} min</p>}
+            {settings.free_delivery_min_cents > 0 && subtotal < settings.free_delivery_min_cents && (
+              <p className="text-xs text-muted-foreground">Faltam {money(settings.free_delivery_min_cents - subtotal)} para frete grátis.</p>
+            )}
           </div>
 
           <Button variant="hero" size="xl" className="mt-5 w-full" disabled={!canSubmit} onClick={() => void onSubmit()}>

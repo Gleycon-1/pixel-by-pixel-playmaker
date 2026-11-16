@@ -309,6 +309,7 @@ export type Database = {
           delivery_fee_cents: number
           dispatched_at: string | null
           distance_km: number | null
+          eta_minutes: number | null
           fulfillment: string
           id: string
           mp_order_id: string | null
@@ -317,6 +318,7 @@ export type Database = {
           payment_method: string
           pix_qr_base64: string | null
           pix_qr_code: string | null
+          source: string
           status: string
           subtotal_cents: number
           total_cents: number
@@ -343,6 +345,7 @@ export type Database = {
           delivery_fee_cents?: number
           dispatched_at?: string | null
           distance_km?: number | null
+          eta_minutes?: number | null
           fulfillment?: string
           id?: string
           mp_order_id?: string | null
@@ -351,6 +354,7 @@ export type Database = {
           payment_method: string
           pix_qr_base64?: string | null
           pix_qr_code?: string | null
+          source?: string
           status?: string
           subtotal_cents: number
           total_cents: number
@@ -377,6 +381,7 @@ export type Database = {
           delivery_fee_cents?: number
           dispatched_at?: string | null
           distance_km?: number | null
+          eta_minutes?: number | null
           fulfillment?: string
           id?: string
           mp_order_id?: string | null
@@ -385,6 +390,7 @@ export type Database = {
           payment_method?: string
           pix_qr_base64?: string | null
           pix_qr_code?: string | null
+          source?: string
           status?: string
           subtotal_cents?: number
           total_cents?: number
@@ -419,6 +425,7 @@ export type Database = {
           name: string
           position: number
           price_cents: number
+          stock: number | null
         }
         Insert: {
           available?: boolean
@@ -431,6 +438,7 @@ export type Database = {
           name: string
           position?: number
           price_cents: number
+          stock?: number | null
         }
         Update: {
           available?: boolean
@@ -443,6 +451,7 @@ export type Database = {
           name?: string
           position?: number
           price_cents?: number
+          stock?: number | null
         }
         Relationships: [
           {
@@ -461,17 +470,23 @@ export type Database = {
           accept_pix: boolean
           address_text: string | null
           allow_pickup: boolean
+          cashback_percent: number
+          close_time: string
+          eta_minutes: number
           featured_enabled: boolean
+          free_delivery_min_cents: number
           google_maps_url: string | null
           id: number
           instagram_url: string | null
           instagram_user: string | null
           limite_km_taxa_fixa: number
+          open_time: string
           origin_cep: string
           origin_lat: number | null
           origin_lng: number | null
           pix_test_mode: boolean
           raio_maximo_km: number
+          store_mode: string
           store_name: string | null
           store_open: boolean
           tagline: string | null
@@ -487,17 +502,23 @@ export type Database = {
           accept_pix?: boolean
           address_text?: string | null
           allow_pickup?: boolean
+          cashback_percent?: number
+          close_time?: string
+          eta_minutes?: number
           featured_enabled?: boolean
+          free_delivery_min_cents?: number
           google_maps_url?: string | null
           id?: number
           instagram_url?: string | null
           instagram_user?: string | null
           limite_km_taxa_fixa?: number
+          open_time?: string
           origin_cep?: string
           origin_lat?: number | null
           origin_lng?: number | null
           pix_test_mode?: boolean
           raio_maximo_km?: number
+          store_mode?: string
           store_name?: string | null
           store_open?: boolean
           tagline?: string | null
@@ -513,17 +534,23 @@ export type Database = {
           accept_pix?: boolean
           address_text?: string | null
           allow_pickup?: boolean
+          cashback_percent?: number
+          close_time?: string
+          eta_minutes?: number
           featured_enabled?: boolean
+          free_delivery_min_cents?: number
           google_maps_url?: string | null
           id?: number
           instagram_url?: string | null
           instagram_user?: string | null
           limite_km_taxa_fixa?: number
+          open_time?: string
           origin_cep?: string
           origin_lat?: number | null
           origin_lng?: number | null
           pix_test_mode?: boolean
           raio_maximo_km?: number
+          store_mode?: string
           store_name?: string | null
           store_open?: boolean
           tagline?: string | null
@@ -553,6 +580,10 @@ export type Database = {
       customer_verify_pin: {
         Args: { p_phone: string; p_pin: string }
         Returns: Json
+      }
+      decrement_stock: {
+        Args: { p_product: string; p_qty: number }
+        Returns: undefined
       }
     }
     Enums: {

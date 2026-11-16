@@ -1,5 +1,5 @@
 export const ORDER_SELECT =
-  "id, code, customer_id, customer_name, customer_phone, status, fulfillment, address, distance_km, billed_km, subtotal_cents, delivery_fee_cents, cashback_used_cents, cashback_earned_cents, total_cents, payment_method, card_type, cash_change_for_cents, change_due_cents, notes, pix_qr_code, paid_at, courier_id, dispatched_at, delivered_at, cancelled_at, created_at, order_items(id, product_id, name, unit_price_cents, quantity)";
+  "id, code, customer_id, customer_name, customer_phone, status, fulfillment, address, distance_km, billed_km, subtotal_cents, delivery_fee_cents, cashback_used_cents, cashback_earned_cents, total_cents, payment_method, card_type, cash_change_for_cents, change_due_cents, notes, pix_qr_code, paid_at, courier_id, dispatched_at, delivered_at, cancelled_at, created_at, source, eta_minutes, order_items(id, product_id, name, unit_price_cents, quantity)";
 
 export type OrderAddress = {
   cep: string;
@@ -50,11 +50,14 @@ export type OrderDTO = {
   delivered_at: string | null;
   cancelled_at: string | null;
   created_at: string;
+  source: string;
+  eta_minutes: number | null;
   order_items: OrderItemDTO[];
 };
 
 export function formatAddress(a: OrderAddress | null) {
   if (!a) return "";
+  if (!a.city) return a.street;
   return `${a.street}, ${a.number}${a.complement ? ` - ${a.complement}` : ""} - ${a.neighborhood ? a.neighborhood + ", " : ""}${a.city}/${a.state} - CEP ${a.cep}`;
 }
 
@@ -62,4 +65,10 @@ export function mapsLinkFor(a: OrderAddress | null) {
   if (!a) return "";
   if (a.lat != null && a.lng != null) return `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddress(a))}`;
+}
+
+/** "até 14:35" a partir da criação + ETA. */
+export function etaDeadline(o: Pick<OrderDTO, "created_at" | "eta_minutes">) {
+  if (!o.eta_minutes) return null;
+  return new Date(new Date(o.created_at).getTime() + o.eta_minutes * 60000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }

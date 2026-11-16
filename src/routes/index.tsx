@@ -66,7 +66,7 @@ function Home() {
                 : "w-fit rounded-full bg-destructive px-3 py-1 text-xs font-bold uppercase tracking-wide text-destructive-foreground"
             }
           >
-            {settings.store_open ? "● Aberto agora" : "Fechado no momento"}
+            {settings.store_open ? `● Aberto · entrega em até ${settings.eta_minutes} min` : "Fechado no momento"}
           </span>
           <h1 className="max-w-xl font-display text-4xl font-extrabold leading-[0.95] sm:text-6xl">{info.name}</h1>
           <p className="max-w-md text-base text-foreground/80 sm:text-lg">{info.tagline}</p>
