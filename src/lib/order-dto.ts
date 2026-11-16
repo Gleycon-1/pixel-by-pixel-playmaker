@@ -57,6 +57,7 @@ export type OrderDTO = {
 
 export function formatAddress(a: OrderAddress | null) {
   if (!a) return "";
+  if (!a.city) return a.street;
   return `${a.street}, ${a.number}${a.complement ? ` - ${a.complement}` : ""} - ${a.neighborhood ? a.neighborhood + ", " : ""}${a.city}/${a.state} - CEP ${a.cep}`;
 }
 

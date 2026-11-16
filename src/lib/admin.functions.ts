@@ -378,6 +378,7 @@ export const adminPdvSale = createServerFn({ method: "POST" })
       customerName: z.string().trim().max(80).nullable().optional(),
       customerPhone: z.string().trim().max(20).nullable().optional(),
       deliveryFeeCents: z.number().int().min(0).max(100_000).optional(),
+      addressLine: z.string().trim().max(240).nullable().optional(),
       notes: z.string().trim().max(300).nullable().optional(),
     }).parse(d),
   )
@@ -437,7 +438,8 @@ export const adminPdvSale = createServerFn({ method: "POST" })
         customer_name: name,
         customer_phone: phone,
         status: done ? "delivered" : "received",
-        fulfillment: "pickup",
+        fulfillment: !done && data.addressLine ? "delivery" : "pickup",
+        address: !done && data.addressLine ? { cep: "", street: data.addressLine, number: "", city: "", state: "" } : null,
         source: data.source,
         subtotal_cents: subtotal,
         delivery_fee_cents: fee,
