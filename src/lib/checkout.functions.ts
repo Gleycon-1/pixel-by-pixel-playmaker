@@ -7,7 +7,7 @@ import { calcChange, usableCashback } from "./rules";
 import { createPixOrder, fetchMpOrder } from "./mercadopago.server";
 import { markOrderPaid, refundCashbackIfNeeded } from "./orders.server";
 import { addressSchema } from "./schemas";
-import type { Database } from "@/integrations/supabase/types";
+import type { Json } from "@/integrations/supabase/types";
 
 const tokenSchema = z.string().min(10).max(200);
 
@@ -133,7 +133,7 @@ export const placeOrder = createServerFn({ method: "POST" })
         customer_phone: customer.phone,
         status: isPix ? "awaiting_payment" : "received",
         fulfillment: data.fulfillment,
-        address: address as Database["public"]["Tables"]["orders"]["Insert"]["address"],
+        address: address as Json,
         distance_km: distanceKm,
         billed_km: billedKm,
         subtotal_cents: subtotal,

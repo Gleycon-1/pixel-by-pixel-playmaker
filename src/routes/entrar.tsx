@@ -14,9 +14,10 @@ import { STORE_CONFIG } from "@/store.config";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/entrar")({
-  validateSearch: (s: Record<string, unknown>): { redirect?: string } => ({
-    redirect: typeof s.redirect === "string" && s.redirect.startsWith("/") ? s.redirect : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { redirect?: string | undefined } => {
+    const r = s["redirect"];
+    return { redirect: typeof r === "string" && r.startsWith("/") ? r : undefined };
+  },
   head: () => ({
     meta: [
       { title: `Entrar — ${STORE_CONFIG.storeName}` },
