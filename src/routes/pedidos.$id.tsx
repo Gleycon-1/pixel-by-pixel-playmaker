@@ -13,7 +13,7 @@ import { getMyOrder } from "@/lib/customer.functions";
 import { refreshPixStatus, simulatePixApproval } from "@/lib/checkout.functions";
 import { catalogQuery } from "@/lib/catalog.functions";
 import { dateTime, money, PAYMENT_LABEL } from "@/lib/format";
-import { formatAddress } from "@/lib/order-dto";
+import { etaDeadline, formatAddress } from "@/lib/order-dto";
 import { storeInfo, waLink } from "@/lib/store-info";
 import { useSession } from "@/stores/session";
 import { useHydrated } from "@/stores/hydration";
@@ -158,6 +158,11 @@ function OrderPage() {
         ) : (
           o.status !== "awaiting_payment" && (
             <div className="rounded-2xl border border-border bg-card p-4">
+              {o.fulfillment === "delivery" && o.eta_minutes && !["delivered", "cancelled"].includes(o.status) && (
+                <p className="mb-3 rounded-xl bg-accent/15 p-3 text-center text-sm font-bold text-accent">
+                  🛵 Seu pedido será entregue em até {o.eta_minutes} min (previsão {etaDeadline(o)})
+                </p>
+              )}
               <StatusTimeline status={o.status} fulfillment={o.fulfillment} />
               {o.status === "delivered" && o.cashback_earned_cents > 0 && (
                 <p className="mt-4 rounded-xl bg-accent/10 p-3 text-sm text-accent">🎉 Você ganhou {money(o.cashback_earned_cents)} de cashback neste pedido!</p>
