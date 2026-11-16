@@ -81,7 +81,10 @@ const TABS = [
 ] as const;
 
 function AdminPage() {
-  const hydrated = useHydrated();
+  const storesReady = useHydrated();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const hydrated = mounted && storesReady;
   const { token, setToken } = useAdmin();
   const check = useServerFn(adminCheck);
   const logout = useServerFn(adminLogout);
