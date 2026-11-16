@@ -26,14 +26,15 @@ export async function refundCashbackIfNeeded(orderId: string) {
   }
 }
 
-async function creditCashbackIfNeeded(orderId: string) {
+export async function creditCashbackIfNeeded(orderId: string) {
   const { data: o } = await supabaseAdmin
     .from("orders")
     .select("customer_id, subtotal_cents, cashback_credited")
     .eq("id", orderId)
     .single();
   if (!o || o.cashback_credited || !o.customer_id) return;
-  const earned = calcCashback(o.subtotal_cents);
+  const { data: st } = await supabaseAdmin.from("store_settings").select("cashback_percent").eq("id", 1).single();
+  const earned = calcCashback(o.subtotal_cents, Number(st?.cashback_percent ?? 2));
   const { data } = await supabaseAdmin
     .from("orders")
     .update({ cashback_credited: true, cashback_earned_cents: earned })

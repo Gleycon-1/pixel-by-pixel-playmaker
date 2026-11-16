@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions } from "@tanstack/react-query";
 import { publicDb } from "./public-db.server";
+import { isStoreOpenNow } from "./rules";
 
 export type PublicSettings = {
   store_name: string | null;
@@ -22,6 +23,12 @@ export type PublicSettings = {
   pix_test_mode: boolean;
   featured_enabled: boolean;
   store_open: boolean;
+  store_mode: string;
+  open_time: string;
+  close_time: string;
+  eta_minutes: number;
+  cashback_percent: number;
+  free_delivery_min_cents: number;
 };
 
 export type Category = { id: string; name: string; position: number; active: boolean };
@@ -35,6 +42,7 @@ export type Product = {
   featured: boolean;
   available: boolean;
   position: number;
+  stock: number | null;
 };
 
 export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
@@ -44,7 +52,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
     db.from("categories").select("id,name,position,active").eq("active", true).order("position"),
     db
       .from("products")
-      .select("id,category_id,name,description,price_cents,image_url,featured,available,position")
+      .select("id,category_id,name,description,price_cents,image_url,featured,available,position,stock")
       .order("position"),
   ]);
   if (s.error || c.error || p.error) {
@@ -71,7 +79,13 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
     allow_pickup: st.allow_pickup,
     pix_test_mode: st.pix_test_mode,
     featured_enabled: st.featured_enabled,
-    store_open: st.store_open,
+    store_open: isStoreOpenNow(st.store_mode, st.open_time, st.close_time),
+    store_mode: st.store_mode,
+    open_time: st.open_time,
+    close_time: st.close_time,
+    eta_minutes: st.eta_minutes,
+    cashback_percent: Number(st.cashback_percent),
+    free_delivery_min_cents: st.free_delivery_min_cents,
   };
   return { settings, categories: c.data as Category[], products: p.data as Product[] };
 });
