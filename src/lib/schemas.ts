@@ -1,14 +1,23 @@
 import { z } from "zod";
 
+/** Campo opcional que sempre sai como string | null (sem undefined). */
+const opt = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((v) => (v ? v : null));
+
 export const addressSchema = z.object({
-  label: z.string().trim().max(40).optional().nullable(),
+  label: opt(40),
   cep: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido."),
   street: z.string().trim().min(2).max(160),
   number: z.string().trim().min(1).max(20),
-  complement: z.string().trim().max(80).optional().nullable(),
-  neighborhood: z.string().trim().max(80).optional().nullable(),
+  complement: opt(80),
+  neighborhood: opt(80),
   city: z.string().trim().min(2).max(80),
   state: z.string().trim().length(2),
-  reference: z.string().trim().max(160).optional().nullable(),
+  reference: opt(160),
 });
 export type AddressFormValues = z.infer<typeof addressSchema>;

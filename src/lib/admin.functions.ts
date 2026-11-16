@@ -5,6 +5,7 @@ import { createAdminSession, endAdminSession, requireAdmin } from "./session.ser
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { transitionOrder } from "./orders.server";
 import { lookupCep, geocode } from "./geo.server";
+import type { Database } from "@/integrations/supabase/types";
 
 const token = z.string().min(10).max(200);
 const withToken = <T extends z.ZodRawShape>(shape: T) => z.object({ token, ...shape });
@@ -120,8 +121,11 @@ export const adminMoveCategory = createServerFn({ method: "POST" })
     const list = cats ?? [];
     const i = list.findIndex((c) => c.id === data.id);
     const j = data.direction === "up" ? i - 1 : i + 1;
-    if (i < 0 || j < 0 || j >= list.length) return { ok: true };
-    [list[i], list[j]] = [list[j], list[i]];
+    const a = list[i];
+    const b = list[j];
+    if (i < 0 || !a || !b) return { ok: true };
+    list[i] = b;
+    list[j] = a;
     await Promise.all(list.map((c, idx) => supabaseAdmin.from("categories").update({ position: idx + 1 }).eq("id", c.id)));
     return { ok: true };
   });
@@ -156,7 +160,8 @@ export const adminToggleProduct = createServerFn({ method: "POST" })
   .inputValidator((d) => withToken({ id: z.string().uuid(), field: z.enum(["featured", "available"]), value: z.boolean() }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
-    await supabaseAdmin.from("products").update({ [data.field]: data.value }).eq("id", data.id);
+    const patch = data.field === "featured" ? { featured: data.value } : { available: data.value };
+    await supabaseAdmin.from("products").update(patch).eq("id", data.id);
     return { ok: true };
   });
 
@@ -292,7 +297,7 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
     const { token: _t, ...row } = data;
     const empty = (v: string | null) => (v && v.length ? v : null);
     const { data: current } = await supabaseAdmin.from("store_settings").select("origin_cep").eq("id", 1).single();
-    const patch: Record<string, unknown> = {
+    const patch: Database["public"]["Tables"]["store_settings"]["Update"] = {
       ...row,
       store_name: empty(row.store_name),
       tagline: empty(row.tagline),
@@ -315,5 +320,13 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
     }
     const { error } = await supabaseAdmin.from("store_settings").update(patch).eq("id", 1);
     if (error) throw new Error("Erro ao salvar configurações.");
+    return { ok: true };
+  });
+
+export const adminSetFeaturedEnabled = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ value: z.boolean() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("store_settings").update({ featured_enabled: data.value }).eq("id", 1);
     return { ok: true };
   });
