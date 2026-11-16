@@ -5,6 +5,7 @@ import { createCustomerSession, endCustomerSession, requireCustomer } from "./se
 import { normalizePhone } from "./rules";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { lookupCep } from "./geo.server";
+import { addressSchema } from "./schemas";
 
 const phoneSchema = z.string().min(8).max(25);
 const pinSchema = z.string().regex(/^\d{4}$/, "O PIN deve ter 4 números.");
@@ -105,17 +106,7 @@ export const getMe = createServerFn({ method: "POST" })
     };
   });
 
-export const addressSchema = z.object({
-  label: z.string().trim().max(40).optional().nullable(),
-  cep: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido."),
-  street: z.string().trim().min(2).max(160),
-  number: z.string().trim().min(1).max(20),
-  complement: z.string().trim().max(80).optional().nullable(),
-  neighborhood: z.string().trim().max(80).optional().nullable(),
-  city: z.string().trim().min(2).max(80),
-  state: z.string().trim().length(2),
-  reference: z.string().trim().max(160).optional().nullable(),
-});
+
 
 export const saveAddress = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token: tokenSchema, address: addressSchema }).parse(d))

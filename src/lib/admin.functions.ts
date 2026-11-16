@@ -1,0 +1,319 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createAdminSession, endAdminSession, requireAdmin } from "./session.server";
+import { ORDER_SELECT, type OrderDTO } from "./order-dto";
+import { transitionOrder } from "./orders.server";
+import { lookupCep, geocode } from "./geo.server";
+
+const token = z.string().min(10).max(200);
+const withToken = <T extends z.ZodRawShape>(shape: T) => z.object({ token, ...shape });
+
+export const adminLogin = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ password: z.string().min(1).max(100) }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: r, error } = await supabaseAdmin.rpc("admin_verify_password", { p_password: data.password });
+    if (error) throw new Error("Não foi possível entrar agora.");
+    const res = r as { status: string; locked_until?: string };
+    if (res.status === "locked") return { ok: false as const, message: "Muitas tentativas. Aguarde 15 minutos." };
+    if (res.status !== "ok") return { ok: false as const, message: "Senha incorreta." };
+    return { ok: true as const, token: await createAdminSession() };
+  });
+
+export const adminLogout = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({}).parse(d))
+  .handler(async ({ data }) => {
+    await endAdminSession(data.token);
+    return { ok: true };
+  });
+
+export const adminCheck = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({}).parse(d))
+  .handler(async ({ data }) => {
+    try {
+      await requireAdmin(data.token);
+      return { ok: true };
+    } catch {
+      return { ok: false };
+    }
+  });
+
+export const adminChangePassword = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ newPassword: z.string().min(6).max(100) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { error } = await supabaseAdmin.rpc("admin_set_password", { p_password: data.newPassword });
+    if (error) throw new Error("Não foi possível alterar a senha.");
+    return { ok: true };
+  });
+
+// ---------------- ORDERS ----------------
+export const adminOrders = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ scope: z.enum(["active", "history"]) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    let q = supabaseAdmin.from("orders").select(ORDER_SELECT).order("created_at", { ascending: false });
+    if (data.scope === "active") {
+      q = q.in("status", ["awaiting_payment", "received", "preparing", "out_for_delivery", "ready_for_pickup"]).limit(200);
+    } else {
+      q = q.in("status", ["delivered", "cancelled"]).limit(100);
+    }
+    const { data: rows, error } = await q;
+    if (error) throw new Error("Erro ao carregar pedidos.");
+    return (rows ?? []) as unknown as OrderDTO[];
+  });
+
+export const adminSetOrderStatus = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    withToken({
+      orderId: z.string().uuid(),
+      status: z.enum(["received", "preparing", "out_for_delivery", "ready_for_pickup", "delivered", "cancelled"]),
+      courierId: z.string().uuid().optional().nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await transitionOrder(data.orderId, data.status, data.courierId);
+    return { ok: true };
+  });
+
+// ---------------- CATALOG ----------------
+export const adminCatalog = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({}).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const [c, p] = await Promise.all([
+      supabaseAdmin.from("categories").select("*").order("position"),
+      supabaseAdmin.from("products").select("*").order("position"),
+    ]);
+    return { categories: c.data ?? [], products: p.data ?? [] };
+  });
+
+export const adminSaveCategory = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    withToken({ id: z.string().uuid().optional().nullable(), name: z.string().trim().min(1).max(60), active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    if (data.id) {
+      await supabaseAdmin.from("categories").update({ name: data.name, active: data.active }).eq("id", data.id);
+    } else {
+      const { data: last } = await supabaseAdmin.from("categories").select("position").order("position", { ascending: false }).limit(1).maybeSingle();
+      await supabaseAdmin.from("categories").insert({ name: data.name, active: data.active, position: (last?.position ?? 0) + 1 });
+    }
+    return { ok: true };
+  });
+
+export const adminDeleteCategory = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("categories").delete().eq("id", data.id);
+    return { ok: true };
+  });
+
+export const adminMoveCategory = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid(), direction: z.enum(["up", "down"]) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { data: cats } = await supabaseAdmin.from("categories").select("id,position").order("position");
+    const list = cats ?? [];
+    const i = list.findIndex((c) => c.id === data.id);
+    const j = data.direction === "up" ? i - 1 : i + 1;
+    if (i < 0 || j < 0 || j >= list.length) return { ok: true };
+    [list[i], list[j]] = [list[j], list[i]];
+    await Promise.all(list.map((c, idx) => supabaseAdmin.from("categories").update({ position: idx + 1 }).eq("id", c.id)));
+    return { ok: true };
+  });
+
+const productShape = {
+  id: z.string().uuid().optional().nullable(),
+  category_id: z.string().uuid().nullable(),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(400).nullable(),
+  price_cents: z.number().int().min(0).max(10_000_000),
+  image_url: z.string().max(500).nullable(),
+  featured: z.boolean(),
+  available: z.boolean(),
+};
+
+export const adminSaveProduct = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken(productShape).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { token: _t, id, ...row } = data;
+    if (id) {
+      const { error } = await supabaseAdmin.from("products").update(row).eq("id", id);
+      if (error) throw new Error("Erro ao salvar produto.");
+    } else {
+      const { error } = await supabaseAdmin.from("products").insert({ ...row, position: Date.now() % 1_000_000 });
+      if (error) throw new Error("Erro ao criar produto.");
+    }
+    return { ok: true };
+  });
+
+export const adminToggleProduct = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid(), field: z.enum(["featured", "available"]), value: z.boolean() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("products").update({ [data.field]: data.value }).eq("id", data.id);
+    return { ok: true };
+  });
+
+export const adminDeleteProduct = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("products").delete().eq("id", data.id);
+    return { ok: true };
+  });
+
+export const adminCreateUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ filename: z.string().min(1).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const ext = (data.filename.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
+    const path = `products/${crypto.randomUUID()}.${ext}`;
+    const { data: signed, error } = await supabaseAdmin.storage.from("product-images").createSignedUploadUrl(path);
+    if (error || !signed) throw new Error("Não foi possível preparar o envio da foto.");
+    return { path, uploadToken: signed.token, publicUrl: `/media/${path}` };
+  });
+
+// ---------------- COURIERS ----------------
+export const adminCouriers = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({}).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { data: rows } = await supabaseAdmin.from("couriers").select("*").order("name");
+    return rows ?? [];
+  });
+
+export const adminSaveCourier = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    withToken({
+      id: z.string().uuid().optional().nullable(),
+      name: z.string().trim().min(2).max(80),
+      plate: z.string().trim().max(12).nullable(),
+      whatsapp: z.string().trim().min(10).max(20),
+      active: z.boolean(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { token: _t, id, ...row } = data;
+    row.whatsapp = row.whatsapp.replace(/\D/g, "");
+    if (!row.whatsapp.startsWith("55")) row.whatsapp = "55" + row.whatsapp;
+    if (id) await supabaseAdmin.from("couriers").update(row).eq("id", id);
+    else await supabaseAdmin.from("couriers").insert(row);
+    return { ok: true };
+  });
+
+export const adminDeleteCourier = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("couriers").delete().eq("id", data.id);
+    return { ok: true };
+  });
+
+export const adminCourierReport = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ from: z.string(), to: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const [{ data: couriers }, { data: rides }] = await Promise.all([
+      supabaseAdmin.from("couriers").select("id,name,plate,whatsapp"),
+      supabaseAdmin
+        .from("orders")
+        .select("id,code,courier_id,customer_name,delivery_fee_cents,distance_km,total_cents,payment_method,change_due_cents,delivered_at")
+        .eq("status", "delivered")
+        .eq("fulfillment", "delivery")
+        .not("courier_id", "is", null)
+        .gte("delivered_at", data.from)
+        .lte("delivered_at", data.to)
+        .order("delivered_at"),
+    ]);
+    const report = (couriers ?? []).map((c) => {
+      const mine = (rides ?? []).filter((r) => r.courier_id === c.id);
+      return {
+        courier: c,
+        rides: mine.map((r) => ({ ...r, distance_km: r.distance_km == null ? null : Number(r.distance_km) })),
+        count: mine.length,
+        feesCents: mine.reduce((a, r) => a + r.delivery_fee_cents, 0),
+        cashCollectedCents: mine.filter((r) => r.payment_method === "cash").reduce((a, r) => a + r.total_cents, 0),
+        distanceKm: mine.reduce((a, r) => a + Number(r.distance_km ?? 0), 0),
+      };
+    });
+    return report.filter((r) => r.count > 0 || true);
+  });
+
+// ---------------- SETTINGS ----------------
+export const adminGetSettings = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({}).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { data: s } = await supabaseAdmin.from("store_settings").select("*").eq("id", 1).single();
+    if (!s) throw new Error("Configurações não encontradas.");
+    return {
+      ...s,
+      raio_maximo_km: Number(s.raio_maximo_km),
+      limite_km_taxa_fixa: Number(s.limite_km_taxa_fixa),
+      mp_configured: !!process.env["MERCADO_PAGO_ACCESS_TOKEN"],
+    };
+  });
+
+const opt = (max: number) => z.string().trim().max(max).nullable();
+export const adminSaveSettings = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    withToken({
+      store_name: opt(80),
+      tagline: opt(160),
+      whatsapp_number: opt(20),
+      whatsapp_display: opt(30),
+      instagram_user: opt(60),
+      instagram_url: opt(200),
+      address_text: opt(200),
+      google_maps_url: opt(500),
+      origin_cep: z.string().regex(/^\d{5}-?\d{3}$/),
+      raio_maximo_km: z.number().min(0.5).max(200),
+      limite_km_taxa_fixa: z.number().min(0).max(200),
+      valor_taxa_fixa_cents: z.number().int().min(0).max(100_000),
+      valor_por_km_adicional_cents: z.number().int().min(0).max(100_000),
+      accept_pix: z.boolean(),
+      accept_card: z.boolean(),
+      accept_cash: z.boolean(),
+      allow_pickup: z.boolean(),
+      pix_test_mode: z.boolean(),
+      featured_enabled: z.boolean(),
+      store_open: z.boolean(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { token: _t, ...row } = data;
+    const empty = (v: string | null) => (v && v.length ? v : null);
+    const { data: current } = await supabaseAdmin.from("store_settings").select("origin_cep").eq("id", 1).single();
+    const patch: Record<string, unknown> = {
+      ...row,
+      store_name: empty(row.store_name),
+      tagline: empty(row.tagline),
+      whatsapp_number: row.whatsapp_number ? row.whatsapp_number.replace(/\D/g, "") || null : null,
+      whatsapp_display: empty(row.whatsapp_display),
+      instagram_user: empty(row.instagram_user),
+      instagram_url: empty(row.instagram_url),
+      address_text: empty(row.address_text),
+      google_maps_url: empty(row.google_maps_url),
+      updated_at: new Date().toISOString(),
+    };
+    const newCep = row.origin_cep.replace(/\D/g, "");
+    if (current?.origin_cep?.replace(/\D/g, "") !== newCep) {
+      const addr = await lookupCep(newCep);
+      const pos = await geocode({ ...addr, number: "" });
+      if (!pos) throw new Error("Não foi possível localizar o novo CEP base.");
+      patch.origin_cep = addr.cep;
+      patch.origin_lat = pos.lat;
+      patch.origin_lng = pos.lng;
+    }
+    const { error } = await supabaseAdmin.from("store_settings").update(patch).eq("id", 1);
+    if (error) throw new Error("Erro ao salvar configurações.");
+    return { ok: true };
+  });

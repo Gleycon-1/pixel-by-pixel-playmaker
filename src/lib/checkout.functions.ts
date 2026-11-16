@@ -6,7 +6,7 @@ import { quoteDelivery } from "./geo.server";
 import { calcChange, usableCashback } from "./rules";
 import { createPixOrder, fetchMpOrder } from "./mercadopago.server";
 import { markOrderPaid, refundCashbackIfNeeded } from "./orders.server";
-import { addressSchema } from "./customer.functions";
+import { addressSchema } from "./schemas";
 
 const tokenSchema = z.string().min(10).max(200);
 
