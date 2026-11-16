@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, Banknote, Bike, CreditCard, Loader2, MapPin, Minus, Plus, QrCode, Store, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/store/PageShell";
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/carrinho")({
   component: CartPage,
 });
 
-function Option({ active, onClick, icon, title, subtitle, disabled }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; subtitle?: string; disabled?: boolean }) {
+function Option({ active, onClick, icon, title, subtitle, disabled }: { active: boolean; onClick: () => void; icon: ReactNode; title: string; subtitle?: string; disabled?: boolean }) {
   return (
     <button
       type="button"
@@ -55,7 +55,7 @@ function Option({ active, onClick, icon, title, subtitle, disabled }: { active: 
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-6">
       <h2 className="mb-3 text-lg font-extrabold">{title}</h2>

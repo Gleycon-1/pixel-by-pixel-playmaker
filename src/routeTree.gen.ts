@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as MediaSplatRouteImport } from './routes/media.$'
@@ -18,6 +19,11 @@ import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/pu
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarrinhoRoute = CarrinhoRouteImport.update({
+  id: '/carrinho',
+  path: '/carrinho',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -44,6 +50,7 @@ const ApiPublicMercadopagoWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/carrinho': typeof CarrinhoRoute
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/carrinho': typeof CarrinhoRoute
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
@@ -59,6 +67,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/carrinho': typeof CarrinhoRoute
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
@@ -68,6 +77,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/carrinho'
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
@@ -75,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/carrinho'
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
@@ -82,6 +93,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/carrinho'
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
@@ -90,6 +102,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CarrinhoRoute: typeof CarrinhoRoute
   EntrarRoute: typeof EntrarRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   MediaSplatRoute: typeof MediaSplatRoute
@@ -103,6 +116,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carrinho': {
+      id: '/carrinho'
+      path: '/carrinho'
+      fullPath: '/carrinho'
+      preLoaderRoute: typeof CarrinhoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -138,6 +158,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CarrinhoRoute: CarrinhoRoute,
   EntrarRoute: EntrarRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   MediaSplatRoute: MediaSplatRoute,
