@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+- Admin panel lives in src/components/admin/* and is gated by an admin session token (not Cloud auth); every admin server fn calls requireAdmin — keeps storefront customers and staff fully separate.
+- Store open/closed is computed by isStoreOpenNow (rules.ts) from store_mode + hours on the server — never trust a stored boolean alone.
