@@ -322,3 +322,11 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
     if (error) throw new Error("Erro ao salvar configurações.");
     return { ok: true };
   });
+
+export const adminSetFeaturedEnabled = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ value: z.boolean() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("store_settings").update({ featured_enabled: data.value }).eq("id", 1);
+    return { ok: true };
+  });

@@ -11,9 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
+import { Route as ContaRouteImport } from './routes/conta'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as MediaSplatRouteImport } from './routes/media.$'
+import { Route as PedidosIndexRouteImport } from './routes/pedidos.index'
+import { Route as PedidosIdRouteImport } from './routes/pedidos.$id'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago-webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -24,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const CarrinhoRoute = CarrinhoRouteImport.update({
   id: '/carrinho',
   path: '/carrinho',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContaRoute = ContaRouteImport.update({
+  id: '/conta',
+  path: '/conta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -41,6 +49,16 @@ const MediaSplatRoute = MediaSplatRouteImport.update({
   path: '/media/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PedidosIndexRoute = PedidosIndexRouteImport.update({
+  id: '/pedidos/',
+  path: '/pedidos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PedidosIdRoute = PedidosIdRouteImport.update({
+  id: '/pedidos/$id',
+  path: '/pedidos/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMercadopagoWebhookRoute =
   ApiPublicMercadopagoWebhookRouteImport.update({
     id: '/api/public/mercadopago-webhook',
@@ -51,26 +69,35 @@ const ApiPublicMercadopagoWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/carrinho': typeof CarrinhoRoute
+  '/conta': typeof ContaRoute
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
+  '/pedidos/$id': typeof PedidosIdRoute
+  '/pedidos/': typeof PedidosIndexRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/carrinho': typeof CarrinhoRoute
+  '/conta': typeof ContaRoute
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
+  '/pedidos/$id': typeof PedidosIdRoute
+  '/pedidos': typeof PedidosIndexRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/carrinho': typeof CarrinhoRoute
+  '/conta': typeof ContaRoute
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
+  '/pedidos/$id': typeof PedidosIdRoute
+  '/pedidos/': typeof PedidosIndexRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
 }
 export interface FileRouteTypes {
@@ -78,34 +105,46 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/carrinho'
+    | '/conta'
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
+    | '/pedidos/$id'
+    | '/pedidos/'
     | '/api/public/mercadopago-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/carrinho'
+    | '/conta'
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
+    | '/pedidos/$id'
+    | '/pedidos'
     | '/api/public/mercadopago-webhook'
   id:
     | '__root__'
     | '/'
     | '/carrinho'
+    | '/conta'
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
+    | '/pedidos/$id'
+    | '/pedidos/'
     | '/api/public/mercadopago-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CarrinhoRoute: typeof CarrinhoRoute
+  ContaRoute: typeof ContaRoute
   EntrarRoute: typeof EntrarRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   MediaSplatRoute: typeof MediaSplatRoute
+  PedidosIdRoute: typeof PedidosIdRoute
+  PedidosIndexRoute: typeof PedidosIndexRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
 }
 
@@ -123,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/carrinho'
       fullPath: '/carrinho'
       preLoaderRoute: typeof CarrinhoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conta': {
+      id: '/conta'
+      path: '/conta'
+      fullPath: '/conta'
+      preLoaderRoute: typeof ContaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -146,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pedidos/': {
+      id: '/pedidos/'
+      path: '/pedidos'
+      fullPath: '/pedidos/'
+      preLoaderRoute: typeof PedidosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pedidos/$id': {
+      id: '/pedidos/$id'
+      path: '/pedidos/$id'
+      fullPath: '/pedidos/$id'
+      preLoaderRoute: typeof PedidosIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mercadopago-webhook': {
       id: '/api/public/mercadopago-webhook'
       path: '/api/public/mercadopago-webhook'
@@ -159,9 +219,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CarrinhoRoute: CarrinhoRoute,
+  ContaRoute: ContaRoute,
   EntrarRoute: EntrarRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   MediaSplatRoute: MediaSplatRoute,
+  PedidosIdRoute: PedidosIdRoute,
+  PedidosIndexRoute: PedidosIndexRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
 }
 export const routeTree = rootRouteImport
