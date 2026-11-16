@@ -17,7 +17,7 @@ export async function lookupCep(cep: string) {
   if (digits.length !== 8) throw new Error("CEP inválido.");
   const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
   if (!res.ok) throw new Error("Não foi possível consultar o CEP agora.");
-  const j = (await res.json()) as Record<string, string> & { erro?: unknown };
+  const j = (await res.json()) as { logradouro?: string; bairro?: string; localidade?: string; uf?: string; erro?: unknown };
   if (j.erro) throw new Error("CEP não encontrado.");
   return {
     cep: `${digits.slice(0, 5)}-${digits.slice(5)}`,
@@ -35,8 +35,9 @@ async function nominatim(params: Record<string, string>) {
   });
   if (!res.ok) return null;
   const arr = (await res.json()) as Array<{ lat: string; lon: string }>;
-  if (!arr?.length) return null;
-  return { lat: Number(arr[0].lat), lng: Number(arr[0].lon) };
+  const first = arr?.[0];
+  if (!first) return null;
+  return { lat: Number(first.lat), lng: Number(first.lon) };
 }
 
 async function photon(q: string) {

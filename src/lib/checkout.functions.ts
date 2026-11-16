@@ -7,6 +7,7 @@ import { calcChange, usableCashback } from "./rules";
 import { createPixOrder, fetchMpOrder } from "./mercadopago.server";
 import { markOrderPaid, refundCashbackIfNeeded } from "./orders.server";
 import { addressSchema } from "./schemas";
+import type { Database } from "@/integrations/supabase/types";
 
 const tokenSchema = z.string().min(10).max(200);
 
@@ -70,7 +71,7 @@ export const placeOrder = createServerFn({ method: "POST" })
     const subtotal = lines.reduce((a, l) => a + l.unit_price_cents * l.quantity, 0);
 
     // Endereço + frete
-    let address: Record<string, unknown> | null = null;
+    let address: (z.infer<typeof addressSchema> & { lat: number; lng: number }) | null = null;
     let fee = 0;
     let distanceKm: number | null = null;
     let billedKm: number | null = null;
@@ -132,7 +133,7 @@ export const placeOrder = createServerFn({ method: "POST" })
         customer_phone: customer.phone,
         status: isPix ? "awaiting_payment" : "received",
         fulfillment: data.fulfillment,
-        address: address as never,
+        address: address as Database["public"]["Tables"]["orders"]["Insert"]["address"],
         distance_km: distanceKm,
         billed_km: billedKm,
         subtotal_cents: subtotal,
@@ -140,7 +141,7 @@ export const placeOrder = createServerFn({ method: "POST" })
         cashback_used_cents: cashbackUsed,
         total_cents: total,
         payment_method: data.paymentMethod,
-        card_type: data.paymentMethod === "card" ? data.cardType : null,
+        card_type: data.paymentMethod === "card" ? (data.cardType ?? null) : null,
         cash_change_for_cents: changeFor,
         change_due_cents: changeDue,
         notes: data.notes || null,

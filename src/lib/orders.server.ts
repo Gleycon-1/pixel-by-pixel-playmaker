@@ -64,7 +64,15 @@ export async function transitionOrder(orderId: string, status: OrderStatus, cour
     throw new Error("Aguardando confirmação do Pix.");
 
   const now = new Date().toISOString();
-  const patch: Record<string, unknown> = { status, updated_at: now };
+  const patch: {
+    status: OrderStatus;
+    updated_at: string;
+    courier_id?: string | null;
+    dispatched_at?: string;
+    delivered_at?: string;
+    cancelled_at?: string;
+    paid_at?: string;
+  } = { status, updated_at: now };
   if (status === "out_for_delivery") {
     if (o.fulfillment === "delivery" && !courierId) throw new Error("Selecione o motoboy.");
     patch.courier_id = courierId ?? null;
