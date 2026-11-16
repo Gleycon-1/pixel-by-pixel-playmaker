@@ -3,7 +3,8 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createAdminSession, endAdminSession, requireAdmin } from "./session.server";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
-import { transitionOrder } from "./orders.server";
+import { creditCashbackIfNeeded, transitionOrder } from "./orders.server";
+import { calcChange, normalizePhone } from "./rules";
 import { lookupCep, geocode } from "./geo.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -139,6 +140,7 @@ const productShape = {
   image_url: z.string().max(500).nullable(),
   featured: z.boolean(),
   available: z.boolean(),
+  stock: z.number().int().min(0).max(1_000_000).nullable(),
 };
 
 export const adminSaveProduct = createServerFn({ method: "POST" })
@@ -262,6 +264,7 @@ export const adminGetSettings = createServerFn({ method: "POST" })
       ...s,
       raio_maximo_km: Number(s.raio_maximo_km),
       limite_km_taxa_fixa: Number(s.limite_km_taxa_fixa),
+      cashback_percent: Number(s.cashback_percent),
       mp_configured: !!process.env["MERCADO_PAGO_ACCESS_TOKEN"],
     };
   });
@@ -289,7 +292,12 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
       allow_pickup: z.boolean(),
       pix_test_mode: z.boolean(),
       featured_enabled: z.boolean(),
-      store_open: z.boolean(),
+      store_mode: z.enum(["open", "closed", "auto"]),
+      open_time: z.string().regex(/^\d{2}:\d{2}$/),
+      close_time: z.string().regex(/^\d{2}:\d{2}$/),
+      eta_minutes: z.number().int().min(5).max(300),
+      cashback_percent: z.number().min(0).max(50),
+      free_delivery_min_cents: z.number().int().min(0).max(10_000_000),
     }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -329,4 +337,129 @@ export const adminSetFeaturedEnabled = createServerFn({ method: "POST" })
     await requireAdmin(data.token);
     await supabaseAdmin.from("store_settings").update({ featured_enabled: data.value }).eq("id", 1);
     return { ok: true };
+  });
+
+// ---------------- CONTROLES RÁPIDOS ----------------
+export const adminQuickSettings = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    withToken({
+      store_mode: z.enum(["open", "closed", "auto"]).optional(),
+      eta_minutes: z.number().int().min(5).max(300).optional(),
+      accept_pix: z.boolean().optional(),
+      accept_card: z.boolean().optional(),
+      accept_cash: z.boolean().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { token: _t, ...patch } = data;
+    const { error } = await supabaseAdmin.from("store_settings").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error("Não foi possível salvar.");
+    return { ok: true };
+  });
+
+export const adminSetOrderEta = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ orderId: z.string().uuid(), minutes: z.number().int().min(5).max(300) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    await supabaseAdmin.from("orders").update({ eta_minutes: data.minutes, updated_at: new Date().toISOString() }).eq("id", data.orderId);
+    return { ok: true };
+  });
+
+// ---------------- PDV (BALCÃO / WHATSAPP) ----------------
+export const adminPdvSale = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    withToken({
+      source: z.enum(["counter", "whatsapp"]),
+      items: z.array(z.object({ productId: z.string().uuid(), qty: z.number().int().min(1).max(999) })).min(1).max(80),
+      paymentMethod: z.enum(["pix", "card", "cash"]),
+      cardType: z.enum(["debit", "credit"]).nullable().optional(),
+      cashGivenCents: z.number().int().min(0).max(10_000_000).nullable().optional(),
+      customerName: z.string().trim().max(80).nullable().optional(),
+      customerPhone: z.string().trim().max(20).nullable().optional(),
+      deliveryFeeCents: z.number().int().min(0).max(100_000).optional(),
+      notes: z.string().trim().max(300).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const ids = [...new Set(data.items.map((i) => i.productId))];
+    const { data: prods } = await supabaseAdmin.from("products").select("id,name,price_cents,stock").in("id", ids);
+    const byId = new Map((prods ?? []).map((p) => [p.id, p]));
+    const lines = data.items.map((i) => {
+      const p = byId.get(i.productId);
+      if (!p) throw new Error("Produto não encontrado.");
+      if (p.stock != null && p.stock < i.qty) throw new Error(`Estoque insuficiente de "${p.name}" (${p.stock} un.).`);
+      return { product_id: p.id, name: p.name, unit_price_cents: p.price_cents, quantity: i.qty };
+    });
+    const subtotal = lines.reduce((a, l) => a + l.unit_price_cents * l.quantity, 0);
+    const fee = data.source === "whatsapp" ? (data.deliveryFeeCents ?? 0) : 0;
+    const total = subtotal + fee;
+
+    let changeFor: number | null = null;
+    let changeDue = 0;
+    if (data.paymentMethod === "cash" && data.cashGivenCents) {
+      const c = calcChange(total, data.cashGivenCents);
+      if (c === null) throw new Error("Valor recebido menor que o total.");
+      changeFor = data.cashGivenCents;
+      changeDue = c;
+    }
+
+    // Cliente opcional (para cashback)
+    let customerId: string | null = null;
+    let name = data.customerName || (data.source === "counter" ? "Cliente balcão" : "Cliente WhatsApp");
+    let phone = "";
+    let createdPin: string | null = null;
+    if (data.customerPhone) {
+      const norm = normalizePhone(data.customerPhone);
+      if (!norm) throw new Error("Telefone do cliente inválido.");
+      phone = norm;
+      const { data: existing } = await supabaseAdmin.from("customers").select("id,name").eq("phone", norm).maybeSingle();
+      if (existing) {
+        customerId = existing.id;
+        if (!data.customerName) name = existing.name;
+      } else {
+        if (!data.customerName) throw new Error("Informe o nome para cadastrar o cliente.");
+        createdPin = norm.slice(-4);
+        const { data: id, error } = await supabaseAdmin.rpc("customer_register", { p_phone: norm, p_name: data.customerName, p_pin: createdPin });
+        if (error) throw new Error("Não foi possível cadastrar o cliente.");
+        customerId = id as string;
+      }
+    }
+
+    const now = new Date().toISOString();
+    const done = data.source === "counter";
+    const { data: st } = await supabaseAdmin.from("store_settings").select("eta_minutes").eq("id", 1).single();
+    const { data: order, error } = await supabaseAdmin
+      .from("orders")
+      .insert({
+        customer_id: customerId,
+        customer_name: name,
+        customer_phone: phone,
+        status: done ? "delivered" : "received",
+        fulfillment: "pickup",
+        source: data.source,
+        subtotal_cents: subtotal,
+        delivery_fee_cents: fee,
+        total_cents: total,
+        payment_method: data.paymentMethod,
+        card_type: data.paymentMethod === "card" ? (data.cardType ?? "debit") : null,
+        cash_change_for_cents: changeFor,
+        change_due_cents: changeDue,
+        notes: data.notes || null,
+        eta_minutes: done ? null : (st?.eta_minutes ?? null),
+        paid_at: data.paymentMethod === "pix" || done ? now : null,
+        delivered_at: done ? now : null,
+      })
+      .select("id, code")
+      .single();
+    if (error || !order) {
+      console.error(error);
+      throw new Error("Não foi possível registrar a venda.");
+    }
+    await supabaseAdmin.from("order_items").insert(lines.map((l) => ({ ...l, order_id: order.id })));
+    await Promise.all(lines.map((l) => supabaseAdmin.rpc("decrement_stock", { p_product: l.product_id, p_qty: l.quantity })));
+    if (done) await creditCashbackIfNeeded(order.id);
+    const { data: o2 } = await supabaseAdmin.from("orders").select("cashback_earned_cents").eq("id", order.id).single();
+    return { orderId: order.id, code: order.code, totalCents: total, changeDueCents: changeDue, cashbackCents: o2?.cashback_earned_cents ?? 0, createdPin };
   });
