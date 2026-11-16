@@ -74,7 +74,7 @@ export function OrdersBoard() {
   const s = settings.data;
   const storeName = storeInfo(s ?? null).name;
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-orders"] });
-  const setQuick = async (patch: Parameters<typeof quick>[0]["data"]) => {
+  const setQuick = async (patch: { store_mode?: "open" | "closed" | "auto"; eta_minutes?: number }) => {
     await run(() => quick({ data: { ...patch, token } }));
     void qc.invalidateQueries({ queryKey: ["admin-settings"] });
   };
@@ -138,7 +138,7 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
   const tag = paymentTag(o);
   const isDelivery = o.fulfillment === "delivery";
 
-  const go = async (status: Parameters<typeof setStatus>[0]["data"]["status"], cId?: string) => {
+  const go = async (status: "received" | "preparing" | "out_for_delivery" | "ready_for_pickup" | "delivered" | "cancelled", cId?: string) => {
     const r = await run(() => setStatus({ data: { token, orderId: o.id, status, courierId: cId ?? null } }));
     if (r) onChange();
     return r;

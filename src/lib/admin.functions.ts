@@ -352,7 +352,8 @@ export const adminQuickSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
-    const { token: _t, ...patch } = data;
+    const { token: _t, ...rest } = data;
+    const patch = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined)) as Database["public"]["Tables"]["store_settings"]["Update"];
     const { error } = await supabaseAdmin.from("store_settings").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1);
     if (error) throw new Error("Não foi possível salvar.");
     return { ok: true };

@@ -91,12 +91,12 @@ export function SettingsPanel() {
             open_time: str("open_time"),
             close_time: str("close_time"),
             store_mode: str("store_mode") as "open" | "closed" | "auto",
-            accept_pix: !!f.accept_pix,
-            accept_card: !!f.accept_card,
-            accept_cash: !!f.accept_cash,
-            allow_pickup: !!f.allow_pickup,
-            pix_test_mode: !!f.pix_test_mode,
-            featured_enabled: !!f.featured_enabled,
+            accept_pix: !!f["accept_pix"],
+            accept_card: !!f["accept_card"],
+            accept_cash: !!f["accept_cash"],
+            allow_pickup: !!f["allow_pickup"],
+            pix_test_mode: !!f["pix_test_mode"],
+            featured_enabled: !!f["featured_enabled"],
           },
         }),
       "Configurações salvas!",
@@ -107,11 +107,12 @@ export function SettingsPanel() {
     }
   };
 
-  const Field = ({ k, label, ...rest }: { k: string; label: string } & React.ComponentProps<typeof Input>) => (
-    <div><Label htmlFor={k}>{label}</Label><Input id={k} value={str(k)} onChange={(e) => set(k, e.target.value)} {...rest} /></div>
+  // funções (não componentes) para não remontar os inputs a cada tecla
+  const field = (k: string, label: string, rest: React.ComponentProps<typeof Input> = {}) => (
+    <div key={k}><Label htmlFor={k}>{label}</Label><Input id={k} value={str(k)} onChange={(e) => set(k, e.target.value)} {...rest} /></div>
   );
-  const Toggle = ({ k, label }: { k: string; label: string }) => (
-    <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm font-semibold">
+  const toggle = (k: string, label: string) => (
+    <label key={k} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm font-semibold">
       {label} <Switch checked={!!f[k]} onCheckedChange={(v) => set(k, v)} />
     </label>
   );
@@ -122,38 +123,38 @@ export function SettingsPanel() {
         <h2 className="font-display text-lg font-extrabold">Operação</h2>
         <div className="grid grid-cols-3 gap-1">
           {(["open", "closed", "auto"] as const).map((m) => (
-            <Button key={m} variant={f.store_mode === m ? "default" : "outline"} onClick={() => set("store_mode", m)}>
+            <Button key={m} variant={f["store_mode"] === m ? "default" : "outline"} onClick={() => set("store_mode", m)}>
               {m === "open" ? "Aberta" : m === "closed" ? "Fechada" : "Automático"}
             </Button>
           ))}
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Field k="open_time" label="Abre às" type="time" />
-          <Field k="close_time" label="Fecha às" type="time" />
-          <Field k="eta_minutes" label="Entrega (min)" inputMode="numeric" />
+          {field("open_time", "Abre às", { type: "time" })}
+          {field("close_time", "Fecha às", { type: "time" })}
+          {field("eta_minutes", "Entrega (min)", { inputMode: "numeric" })}
         </div>
-        <Toggle k="accept_pix" label="Aceitar Pix" />
-        <Toggle k="accept_card" label="Aceitar maquininha" />
-        <Toggle k="accept_cash" label="Aceitar dinheiro" />
-        <Toggle k="allow_pickup" label="Permitir retirada na loja" />
-        <Toggle k="featured_enabled" label='Mostrar vitrine "Destaques"' />
-        <Toggle k="pix_test_mode" label="Pix em modo teste (botão Simular Aprovação)" />
+        {toggle("accept_pix", "Aceitar Pix")}
+        {toggle("accept_card", "Aceitar maquininha")}
+        {toggle("accept_cash", "Aceitar dinheiro")}
+        {toggle("allow_pickup", "Permitir retirada na loja")}
+        {toggle("featured_enabled", 'Mostrar vitrine "Destaques"')}
+        {toggle("pix_test_mode", "Pix em modo teste (botão Simular Aprovação)")}
         {!q.data.mp_configured && <p className="text-xs text-muted-foreground">Mercado Pago ainda não configurado — use o modo teste.</p>}
       </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <h2 className="font-display text-lg font-extrabold">Frete e cashback</h2>
         <div className="grid grid-cols-2 gap-2">
-          <Field k="origin_cep" label="CEP base da loja" onChange={(e) => set("origin_cep", maskCep(e.target.value))} />
-          <Field k="raio_maximo_km" label="Raio máximo (km)" inputMode="decimal" />
-          <Field k="limite_km_taxa_fixa" label="Taxa fixa até (km)" inputMode="decimal" />
-          <Field k="valor_taxa_fixa" label="Taxa fixa (R$)" inputMode="decimal" />
-          <Field k="valor_km" label="Por km adicional (R$)" inputMode="decimal" />
-          <Field k="free_min" label="Frete grátis a partir de (R$, 0 = desligado)" inputMode="decimal" />
-          <Field k="cashback_percent" label="Cashback (%)" inputMode="decimal" />
+          {field("origin_cep", "CEP base da loja", { onChange: (e) => set("origin_cep", maskCep(e.target.value)) })}
+          {field("raio_maximo_km", "Raio máximo (km)", { inputMode: "decimal" })}
+          {field("limite_km_taxa_fixa", "Taxa fixa até (km)", { inputMode: "decimal" })}
+          {field("valor_taxa_fixa", "Taxa fixa (R$)", { inputMode: "decimal" })}
+          {field("valor_km", "Por km adicional (R$)", { inputMode: "decimal" })}
+          {field("free_min", "Frete grátis a partir de (R$, 0 = desligado)", { inputMode: "decimal" })}
+          {field("cashback_percent", "Cashback (%)", { inputMode: "decimal" })}
         </div>
         <h2 className="pt-2 font-display text-lg font-extrabold">Dados da adega</h2>
-        {TEXT.map(([k, label]) => <Field key={k} k={k} label={label} />)}
+        {TEXT.map(([k, label]) => field(k as string, label))}
       </section>
 
       <div className="flex flex-wrap items-end gap-3 lg:col-span-2">
