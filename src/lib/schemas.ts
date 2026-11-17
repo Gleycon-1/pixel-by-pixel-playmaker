@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RESIDENCE_TYPES } from "./address";
 
 /** Campo opcional que sempre sai como string | null (sem undefined). */
 const opt = (max: number) =>
