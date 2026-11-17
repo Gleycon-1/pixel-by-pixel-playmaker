@@ -49,6 +49,8 @@ export function AddressForm({ value, onChange, showLabel = false }: { value: Add
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastCep = useRef("");
+  const valueRef = useRef(value);
+  valueRef.current = value;
   const groupId = useId();
   const set = (patch: Partial<AddressDraft>) => onChange({ ...value, ...patch });
   const highlightComplement = value.residence_type === "apartamento" || value.residence_type === "condominio";
