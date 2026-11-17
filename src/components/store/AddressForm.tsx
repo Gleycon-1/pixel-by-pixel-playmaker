@@ -62,7 +62,10 @@ export function AddressForm({ value, onChange, showLabel = false }: { value: Add
     setLoading(true);
     setError(null);
     cepLookup({ data: { cep: digits } })
-      .then((r) => onChange({ ...value, cep: r.cep, street: r.street || value.street, neighborhood: r.neighborhood || value.neighborhood, city: r.city, state: r.state }))
+      .then((r) => {
+        const current = valueRef.current;
+        onChange({ ...current, cep: r.cep, street: r.street || current.street, neighborhood: r.neighborhood || current.neighborhood, city: r.city, state: r.state });
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
