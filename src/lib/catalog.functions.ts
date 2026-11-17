@@ -47,8 +47,10 @@ export type Product = {
 
 export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
   const db = publicDb();
+  // Settings are read with the server-only client and filtered to public fields below.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const [s, c, p] = await Promise.all([
-    db.from("store_settings").select("*").eq("id", 1).single(),
+    supabaseAdmin.from("store_settings").select("*").eq("id", 1).single(),
     db.from("categories").select("id,name,position,active").eq("active", true).order("position"),
     db
       .from("products")
