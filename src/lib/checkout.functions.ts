@@ -87,7 +87,7 @@ export const placeOrder = createServerFn({ method: "POST" })
           .eq("customer_id", customer.id)
           .maybeSingle();
         if (!a) throw new Error("Endereço não encontrado.");
-        addr = a;
+        addr = { ...a, ...decodeAddressLabel(a.label) };
       } else if (data.newAddress) {
         addr = data.newAddress;
       } else throw new Error("Informe o endereço de entrega.");

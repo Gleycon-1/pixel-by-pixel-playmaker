@@ -264,7 +264,7 @@ function CartPage() {
                     active={effectiveAddressId === a.id}
                     onClick={() => setAddressId(a.id)}
                     icon={<MapPin className="size-5" />}
-                    title={a.label || `${a.street}, ${a.number}`}
+                    title={`${residenceTypeLabel(a.residence_type)}${a.label ? ` · ${a.label}` : ""}`}
                     subtitle={`${a.street}, ${a.number} - ${a.neighborhood ?? ""} ${a.city}/${a.state}`}
                   />
                 ))}

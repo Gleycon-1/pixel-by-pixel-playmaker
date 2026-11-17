@@ -79,6 +79,7 @@ export type AddressDTO = {
   city: string;
   state: string;
   reference: string | null;
+  residence_type: ResidenceType;
 };
 
 export const getMe = createServerFn({ method: "POST" })

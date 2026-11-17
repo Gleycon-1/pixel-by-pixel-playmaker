@@ -24,7 +24,7 @@ hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; } .b { font-weight: 
 <h1>${esc(storeName)}</h1>
 <div class="c">PEDIDO #${o.code}<br>${new Date(o.created_at).toLocaleString("pt-BR")}</div><hr>
 <div>${esc(o.customer_name)}${o.customer_phone ? "<br>" + phoneDisplay(o.customer_phone) : ""}</div>
-${o.fulfillment === "delivery" && o.address ? `<div>${esc(formatAddress(o.address))}${o.address.reference ? "<br>Ref: " + esc(o.address.reference) : ""}</div>` : `<div>RETIRADA / BALCÃO</div>`}
+${o.fulfillment === "delivery" && o.address ? `<div><span class="b">Tipo: ${esc(residenceTypeLabel(o.address.residence_type))}</span><br>${esc(formatAddress(o.address))}${o.address.reference ? "<br>Ref: " + esc(o.address.reference) : ""}</div>` : `<div>RETIRADA / BALCÃO</div>`}
 <hr><table>${rows}</table><hr><table>
 ${line("Subtotal", money(o.subtotal_cents))}
 ${o.delivery_fee_cents ? line("Entrega", money(o.delivery_fee_cents)) : ""}

@@ -177,9 +177,13 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
       <p className="mt-2 font-bold">{o.customer_name}</p>
       {o.customer_phone && <p className="text-xs text-muted-foreground">{phoneDisplay(o.customer_phone)}</p>}
       {isDelivery ? (
-        <a href={mapsLinkFor(o.address)} target="_blank" rel="noreferrer" className="mt-1 flex gap-1 text-xs underline">
-          <MapPin className="size-3.5 shrink-0" /> {formatAddress(o.address)}
-        </a>
+        <div className="mt-1 flex items-start gap-1 text-xs">
+          <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" />
+          <div>
+            <p className="mb-0.5 font-bold text-primary">{residenceTypeLabel(o.address?.residence_type)}</p>
+            <a href={mapsLinkFor(o.address)} target="_blank" rel="noreferrer" className="underline">{formatAddress(o.address)}</a>
+          </div>
+        </div>
       ) : (
         <p className="mt-1 text-xs font-bold text-accent">RETIRADA NA LOJA</p>
       )}
