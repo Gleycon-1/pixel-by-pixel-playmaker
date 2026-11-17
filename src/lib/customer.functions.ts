@@ -116,7 +116,7 @@ export const saveAddress = createServerFn({ method: "POST" })
     const c = await requireCustomer(data.token);
     const { data: row, error } = await supabaseAdmin
       .from("addresses")
-      .insert({ ...data.address, customer_id: c.id })
+      .insert({ ...addressForStorage(data.address), customer_id: c.id })
       .select("id")
       .single();
     if (error) throw new Error("Não foi possível salvar o endereço.");
