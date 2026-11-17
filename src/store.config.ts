@@ -18,7 +18,7 @@ export const STORE_THEME = {
 } as const;
 
 export const STORE_CONFIG = {
-  storeName: "Adega Power House",
+  storeName: "Connect Power",
   tagline: "As melhores bebidas geladas entregues na sua porta",
   logoUrl: "/logo.png",
   headerBannerUrl: "/banner.jpg",
