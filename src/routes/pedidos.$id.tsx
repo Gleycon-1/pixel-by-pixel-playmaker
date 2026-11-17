@@ -18,6 +18,7 @@ import { storeInfo, waLink } from "@/lib/store-info";
 import { useSession } from "@/stores/session";
 import { useHydrated } from "@/stores/hydration";
 import { STORE_CONFIG } from "@/store.config";
+import { residenceTypeLabel } from "@/lib/address";
 
 export const Route = createFileRoute("/pedidos/$id")({
   head: () => ({
@@ -209,9 +210,10 @@ function OrderPage() {
             {o.change_due_cents > 0 ? ` — troco de ${money(o.change_due_cents)}` : ""}
           </p>
           {o.address && (
-            <p className="mt-2 flex gap-2">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" /> {formatAddress(o.address)}
-            </p>
+            <div className="mt-2 flex gap-2">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+              <p><b>{residenceTypeLabel(o.address.residence_type)}:</b> {formatAddress(o.address)}</p>
+            </div>
           )}
           {o.notes && <p className="mt-2 text-muted-foreground">Obs: {o.notes}</p>}
         </div>

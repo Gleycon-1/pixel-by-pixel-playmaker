@@ -6,6 +6,7 @@ import { normalizePhone } from "./rules";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { lookupCep } from "./geo.server";
 import { addressSchema } from "./schemas";
+import { addressForStorage, decodeAddressLabel, type ResidenceType } from "./address";
 
 const phoneSchema = z.string().min(8).max(25);
 const pinSchema = z.string().regex(/^\d{4}$/, "O PIN deve ter 4 números.");
@@ -78,6 +79,7 @@ export type AddressDTO = {
   city: string;
   state: string;
   reference: string | null;
+  residence_type: ResidenceType;
 };
 
 export const getMe = createServerFn({ method: "POST" })
@@ -101,7 +103,7 @@ export const getMe = createServerFn({ method: "POST" })
     ]);
     return {
       customer: { id: c.id, name: c.name, phone: c.phone, cashback_cents: c.cashback_cents },
-      addresses: (addresses ?? []) as AddressDTO[],
+      addresses: (addresses ?? []).map((address) => ({ ...address, ...decodeAddressLabel(address.label) })) as AddressDTO[],
       lastDelivered: (last ?? null) as unknown as OrderDTO | null,
     };
   });
@@ -114,7 +116,7 @@ export const saveAddress = createServerFn({ method: "POST" })
     const c = await requireCustomer(data.token);
     const { data: row, error } = await supabaseAdmin
       .from("addresses")
-      .insert({ ...data.address, customer_id: c.id })
+      .insert({ ...addressForStorage(data.address), customer_id: c.id })
       .select("id")
       .single();
     if (error) throw new Error("Não foi possível salvar o endereço.");

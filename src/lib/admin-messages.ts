@@ -1,5 +1,6 @@
 import { money, PAYMENT_LABEL, phoneDisplay } from "./format";
 import { formatAddress, mapsLinkFor, type OrderDTO } from "./order-dto";
+import { residenceTypeLabel } from "./address";
 
 export function paymentTag(o: OrderDTO): { label: string; tone: "success" | "info" | "warning" | "muted" } {
   if (o.status === "awaiting_payment") return { label: "AGUARDANDO PIX", tone: "muted" };
@@ -27,6 +28,7 @@ export function courierMessage(o: OrderDTO, storeName: string) {
     `👤 *Cliente:* ${o.customer_name}`,
     `📞 ${phoneDisplay(o.customer_phone)}`,
     `🏠 *Endereço:* ${formatAddress(a)}`,
+    a ? `🏡 *Tipo de imóvel:* ${residenceTypeLabel(a.residence_type)}` : null,
     a?.reference ? `📌 Ref: ${a.reference}` : null,
     o.distance_km != null ? `📏 Distância: ${String(o.distance_km).replace(".", ",")} km` : null,
     ``,

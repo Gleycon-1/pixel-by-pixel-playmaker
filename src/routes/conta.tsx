@@ -12,6 +12,7 @@ import { money, phoneDisplay } from "@/lib/format";
 import { useMe } from "@/hooks/use-customer";
 import { useSession } from "@/stores/session";
 import { STORE_CONFIG } from "@/store.config";
+import { residenceTypeLabel } from "@/lib/address";
 
 export const Route = createFileRoute("/conta")({
   head: () => ({
@@ -99,7 +100,7 @@ function AccountPage() {
             <li key={a.id} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5">
               <MapPin className="mt-0.5 size-5 shrink-0 text-primary" />
               <div className="min-w-0 flex-1 text-sm">
-                {a.label && <p className="font-bold">{a.label}</p>}
+                <p className="font-bold">{residenceTypeLabel(a.residence_type)}{a.label ? ` · ${a.label}` : ""}</p>
                 <p>
                   {a.street}, {a.number}
                   {a.complement ? ` - ${a.complement}` : ""}

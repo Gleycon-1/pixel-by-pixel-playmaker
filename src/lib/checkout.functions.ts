@@ -7,6 +7,7 @@ import { applyFreeDelivery, calcChange, isStoreOpenNow, usableCashback } from ".
 import { createPixOrder, fetchMpOrder } from "./mercadopago.server";
 import { markOrderPaid, refundCashbackIfNeeded } from "./orders.server";
 import { addressSchema } from "./schemas";
+import { addressForStorage, decodeAddressLabel } from "./address";
 import type { Json } from "@/integrations/supabase/types";
 
 const tokenSchema = z.string().min(10).max(200);
@@ -86,7 +87,7 @@ export const placeOrder = createServerFn({ method: "POST" })
           .eq("customer_id", customer.id)
           .maybeSingle();
         if (!a) throw new Error("Endereço não encontrado.");
-        addr = a;
+        addr = { ...a, ...decodeAddressLabel(a.label) };
       } else if (data.newAddress) {
         addr = data.newAddress;
       } else throw new Error("Informe o endereço de entrega.");
@@ -102,7 +103,7 @@ export const placeOrder = createServerFn({ method: "POST" })
       billedKm = q.billedKm;
       address = { ...addr, lat: q.lat, lng: q.lng };
       if (!data.addressId && data.newAddress && data.saveAddress) {
-        await supabaseAdmin.from("addresses").insert({ ...data.newAddress, customer_id: customer.id, lat: q.lat, lng: q.lng });
+        await supabaseAdmin.from("addresses").insert({ ...addressForStorage(data.newAddress), customer_id: customer.id, lat: q.lat, lng: q.lng });
       }
     }
 

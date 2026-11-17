@@ -18,6 +18,7 @@ import { cartTotals, useCart } from "@/stores/cart";
 import { useHydrated } from "@/stores/hydration";
 import { useMe } from "@/hooks/use-customer";
 import { STORE_CONFIG } from "@/store.config";
+import { residenceTypeLabel } from "@/lib/address";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/carrinho")({
@@ -263,7 +264,7 @@ function CartPage() {
                     active={effectiveAddressId === a.id}
                     onClick={() => setAddressId(a.id)}
                     icon={<MapPin className="size-5" />}
-                    title={a.label || `${a.street}, ${a.number}`}
+                    title={`${residenceTypeLabel(a.residence_type)}${a.label ? ` · ${a.label}` : ""}`}
                     subtitle={`${a.street}, ${a.number} - ${a.neighborhood ?? ""} ${a.city}/${a.state}`}
                   />
                 ))}
@@ -277,6 +278,19 @@ function CartPage() {
                   <label className="mt-3 flex items-center gap-2 text-sm">
                     <Switch checked={saveAddr} onCheckedChange={setSaveAddr} /> Salvar este endereço
                   </label>
+                </div>
+              )}
+
+              {(selectedSaved || isAddressComplete(draft)) && (
+                <div aria-label="Resumo do endereço de entrega" className="mt-3 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="font-bold text-primary">{residenceTypeLabel(selectedSaved?.residence_type ?? draft.residence_type)}</p>
+                    <p>
+                      {(selectedSaved ?? draft).street}, {(selectedSaved ?? draft).number}
+                      {(selectedSaved ?? draft).complement ? ` · ${(selectedSaved ?? draft).complement}` : ""} · {(selectedSaved ?? draft).city}/{(selectedSaved ?? draft).state}
+                    </p>
+                  </div>
                 </div>
               )}
 
