@@ -103,7 +103,7 @@ export const placeOrder = createServerFn({ method: "POST" })
       billedKm = q.billedKm;
       address = { ...addr, lat: q.lat, lng: q.lng };
       if (!data.addressId && data.newAddress && data.saveAddress) {
-        await supabaseAdmin.from("addresses").insert({ ...data.newAddress, customer_id: customer.id, lat: q.lat, lng: q.lng });
+        await supabaseAdmin.from("addresses").insert({ ...addressForStorage(data.newAddress), customer_id: customer.id, lat: q.lat, lng: q.lng });
       }
     }
 

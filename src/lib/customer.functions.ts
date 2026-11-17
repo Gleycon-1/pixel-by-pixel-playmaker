@@ -103,7 +103,7 @@ export const getMe = createServerFn({ method: "POST" })
     ]);
     return {
       customer: { id: c.id, name: c.name, phone: c.phone, cashback_cents: c.cashback_cents },
-      addresses: (addresses ?? []) as AddressDTO[],
+      addresses: (addresses ?? []).map((address) => ({ ...address, ...decodeAddressLabel(address.label) })) as AddressDTO[],
       lastDelivered: (last ?? null) as unknown as OrderDTO | null,
     };
   });
