@@ -12,6 +12,7 @@ import { money, phoneDisplay } from "@/lib/format";
 import { useMe } from "@/hooks/use-customer";
 import { useSession } from "@/stores/session";
 import { STORE_CONFIG } from "@/store.config";
+import { residenceTypeLabel } from "@/lib/address";
 
 export const Route = createFileRoute("/conta")({
   head: () => ({

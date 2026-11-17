@@ -18,6 +18,7 @@ import { cartTotals, useCart } from "@/stores/cart";
 import { useHydrated } from "@/stores/hydration";
 import { useMe } from "@/hooks/use-customer";
 import { STORE_CONFIG } from "@/store.config";
+import { residenceTypeLabel } from "@/lib/address";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/carrinho")({

@@ -6,6 +6,7 @@ import { normalizePhone } from "./rules";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { lookupCep } from "./geo.server";
 import { addressSchema } from "./schemas";
+import { addressForStorage, decodeAddressLabel, type ResidenceType } from "./address";
 
 const phoneSchema = z.string().min(8).max(25);
 const pinSchema = z.string().regex(/^\d{4}$/, "O PIN deve ter 4 números.");

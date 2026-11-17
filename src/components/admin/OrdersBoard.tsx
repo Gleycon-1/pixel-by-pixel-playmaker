@@ -13,6 +13,7 @@ import { storeInfo, waLink } from "@/lib/store-info";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "./use-admin";
 import { beep, printReceipt, unlockAudio } from "./receipt";
+import { residenceTypeLabel } from "@/lib/address";
 
 const COLUMNS = [
   { key: "received", title: "Recebido", statuses: ["awaiting_payment", "received"] },

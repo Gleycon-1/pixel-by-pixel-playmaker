@@ -20,5 +20,6 @@ export const addressSchema = z.object({
   city: z.string().trim().min(2).max(80),
   state: z.string().trim().length(2),
   reference: opt(160),
+  residence_type: z.enum(RESIDENCE_TYPES).default("casa"),
 });
 export type AddressFormValues = z.infer<typeof addressSchema>;

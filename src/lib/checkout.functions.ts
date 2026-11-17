@@ -7,6 +7,7 @@ import { applyFreeDelivery, calcChange, isStoreOpenNow, usableCashback } from ".
 import { createPixOrder, fetchMpOrder } from "./mercadopago.server";
 import { markOrderPaid, refundCashbackIfNeeded } from "./orders.server";
 import { addressSchema } from "./schemas";
+import { addressForStorage, decodeAddressLabel } from "./address";
 import type { Json } from "@/integrations/supabase/types";
 
 const tokenSchema = z.string().min(10).max(200);

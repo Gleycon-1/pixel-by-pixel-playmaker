@@ -1,5 +1,6 @@
 import { money, PAYMENT_LABEL, phoneDisplay } from "@/lib/format";
 import { formatAddress, type OrderDTO } from "@/lib/order-dto";
+import { residenceTypeLabel } from "@/lib/address";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
 

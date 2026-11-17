@@ -18,6 +18,7 @@ import { storeInfo, waLink } from "@/lib/store-info";
 import { useSession } from "@/stores/session";
 import { useHydrated } from "@/stores/hydration";
 import { STORE_CONFIG } from "@/store.config";
+import { residenceTypeLabel } from "@/lib/address";
 
 export const Route = createFileRoute("/pedidos/$id")({
   head: () => ({

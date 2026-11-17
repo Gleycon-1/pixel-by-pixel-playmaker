@@ -1,5 +1,6 @@
 import { money, PAYMENT_LABEL, phoneDisplay } from "./format";
 import { formatAddress, mapsLinkFor, type OrderDTO } from "./order-dto";
+import { residenceTypeLabel } from "./address";
 
 export function paymentTag(o: OrderDTO): { label: string; tone: "success" | "info" | "warning" | "muted" } {
   if (o.status === "awaiting_payment") return { label: "AGUARDANDO PIX", tone: "muted" };
