@@ -141,6 +141,7 @@ export type Database = {
       }
       couriers: {
         Row: {
+          access_token: string
           active: boolean
           created_at: string
           id: string
@@ -149,6 +150,7 @@ export type Database = {
           whatsapp: string
         }
         Insert: {
+          access_token?: string
           active?: boolean
           created_at?: string
           id?: string
@@ -157,6 +159,7 @@ export type Database = {
           whatsapp: string
         }
         Update: {
+          access_token?: string
           active?: boolean
           created_at?: string
           id?: string
@@ -301,6 +304,9 @@ export type Database = {
           change_due_cents: number
           code: number
           courier_id: string | null
+          courier_lat: number | null
+          courier_lng: number | null
+          courier_location_at: string | null
           created_at: string
           customer_id: string | null
           customer_name: string
@@ -311,6 +317,7 @@ export type Database = {
           distance_km: number | null
           eta_minutes: number | null
           fulfillment: string
+          gps_tracking: boolean
           id: string
           mp_order_id: string | null
           notes: string | null
@@ -337,6 +344,9 @@ export type Database = {
           change_due_cents?: number
           code?: never
           courier_id?: string | null
+          courier_lat?: number | null
+          courier_lng?: number | null
+          courier_location_at?: string | null
           created_at?: string
           customer_id?: string | null
           customer_name: string
@@ -347,6 +357,7 @@ export type Database = {
           distance_km?: number | null
           eta_minutes?: number | null
           fulfillment?: string
+          gps_tracking?: boolean
           id?: string
           mp_order_id?: string | null
           notes?: string | null
@@ -373,6 +384,9 @@ export type Database = {
           change_due_cents?: number
           code?: never
           courier_id?: string | null
+          courier_lat?: number | null
+          courier_lng?: number | null
+          courier_location_at?: string | null
           created_at?: string
           customer_id?: string | null
           customer_name?: string
@@ -383,6 +397,7 @@ export type Database = {
           distance_km?: number | null
           eta_minutes?: number | null
           fulfillment?: string
+          gps_tracking?: boolean
           id?: string
           mp_order_id?: string | null
           notes?: string | null
@@ -489,6 +504,7 @@ export type Database = {
           origin_lng: number | null
           pix_test_mode: boolean
           raio_maximo_km: number
+          require_delivery_pin: boolean
           store_mode: string
           store_name: string | null
           store_open: boolean
@@ -521,6 +537,7 @@ export type Database = {
           origin_lng?: number | null
           pix_test_mode?: boolean
           raio_maximo_km?: number
+          require_delivery_pin?: boolean
           store_mode?: string
           store_name?: string | null
           store_open?: boolean
@@ -553,6 +570,7 @@ export type Database = {
           origin_lng?: number | null
           pix_test_mode?: boolean
           raio_maximo_km?: number
+          require_delivery_pin?: boolean
           store_mode?: string
           store_name?: string | null
           store_open?: boolean

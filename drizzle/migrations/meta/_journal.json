@@ -29,6 +29,13 @@
       "when": 1795037720837,
       "tag": "0003_product_barcode_stock_batch",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795037981107,
+      "tag": "0004_delivery_pin_courier_link_gps",
+      "breakpoints": true
     }
   ]
 }
