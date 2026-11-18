@@ -22,6 +22,13 @@
       "when": 1794891895602,
       "tag": "0002_lock_store_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795037720837,
+      "tag": "0003_product_barcode_stock_batch",
+      "breakpoints": true
     }
   ]
 }

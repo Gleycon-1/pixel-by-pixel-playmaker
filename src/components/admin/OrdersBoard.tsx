@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, BellOff, Clock, MapPin, Minus, Plus, Printer, X } from "lucide-react";
@@ -31,7 +31,14 @@ export function OrdersBoard() {
   const fetchCouriers = useServerFn(adminCouriers);
   const fetchSettings = useServerFn(adminGetSettings);
   const quick = useServerFn(adminQuickSettings);
-  const [sound, setSound] = useState(true);
+  const [sound, setSoundState] = useState(true);
+  useEffect(() => {
+    if (localStorage.getItem("admin-sound") === "off") setSoundState(false);
+  }, []);
+  const setSound = (v: boolean) => {
+    setSoundState(v);
+    localStorage.setItem("admin-sound", v ? "on" : "off");
+  };
 
   const active = useQuery({
     queryKey: ["admin-orders", "active"],
@@ -52,19 +59,14 @@ export function OrdersBoard() {
     if (e) handleError(e);
   }, [active.error, history.error, handleError]);
 
-  // Alerta sonoro para novos pedidos online
-  const seen = useRef<Set<string> | null>(null);
+  // Alerta sonoro em loop enquanto houver pedido novo aguardando "Aceitar pedido"
+  const pending = (active.data ?? []).some((o) => o.source === "online" && o.status === "received");
   useEffect(() => {
-    if (!active.data) return;
-    const ids = active.data.filter((o) => o.source === "online" && o.status === "received").map((o) => o.id);
-    if (seen.current === null) {
-      seen.current = new Set(ids);
-      return;
-    }
-    const fresh = ids.filter((id) => !seen.current!.has(id));
-    ids.forEach((id) => seen.current!.add(id));
-    if (fresh.length && sound) beep();
-  }, [active.data, sound]);
+    if (!pending || !sound) return;
+    beep();
+    const t = setInterval(beep, 2500);
+    return () => clearInterval(t);
+  }, [pending, sound]);
 
   const all = useMemo(() => {
     const since = Date.now() - 24 * 36e5;
@@ -204,7 +206,7 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
       )}
 
       <div className="mt-3 flex flex-col gap-2">
-        {o.status === "received" && <Button size="sm" onClick={() => go("preparing")}>Iniciar preparo</Button>}
+        {o.status === "received" && <Button size="sm" onClick={() => go("preparing")}>Aceitar pedido</Button>}
         {o.status === "preparing" && isDelivery && (
           <div className="flex gap-1">
             <Select value={courierId} onValueChange={setCourierId}>

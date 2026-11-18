@@ -141,13 +141,19 @@ const productShape = {
   featured: z.boolean(),
   available: z.boolean(),
   stock: z.number().int().min(0).max(1_000_000).nullable(),
+  barcode: z.string().trim().max(32).nullable().optional(),
 };
 
 export const adminSaveProduct = createServerFn({ method: "POST" })
   .inputValidator((d) => withToken(productShape).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
-    const { token: _t, id, ...row } = data;
+    const { token: _t, id, ...rest } = data;
+    const row = { ...rest, barcode: rest.barcode?.replace(/\s/g, "") || null };
+    if (row.barcode) {
+      const { data: dup } = await supabaseAdmin.from("products").select("id,name").eq("barcode", row.barcode).maybeSingle();
+      if (dup && dup.id !== id) throw new Error(`Código de barras já usado em "${dup.name}".`);
+    }
     if (id) {
       const { error } = await supabaseAdmin.from("products").update(row).eq("id", id);
       if (error) throw new Error("Erro ao salvar produto.");
@@ -156,6 +162,15 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
       if (error) throw new Error("Erro ao criar produto.");
     }
     return { ok: true };
+  });
+
+export const adminAddStock = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid(), qty: z.number().int().min(1).max(1_000_000) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { data: stock, error } = await supabaseAdmin.rpc("add_stock", { p_product: data.id, p_qty: data.qty });
+    if (error) throw new Error("Erro ao lançar entrada de estoque.");
+    return { stock: stock as number | null };
   });
 
 export const adminToggleProduct = createServerFn({ method: "POST" })

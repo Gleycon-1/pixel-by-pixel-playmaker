@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Minus, Plus, Search, Trash2 } from "lucide-react";
+import { Minus, Plus, ScanBarcode, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,9 +35,38 @@ export function PdvPanel() {
   const [busy, setBusy] = useState(false);
 
   const products = cat.data?.products ?? [];
+  const term = q.trim().toLowerCase();
   const filtered = products.filter(
-    (p) => p.available && (!catId || p.category_id === catId) && p.name.toLowerCase().includes(q.trim().toLowerCase()),
+    (p) => p.available && (!catId || p.category_id === catId) && (p.name.toLowerCase().includes(term) || (!!p.barcode && p.barcode.includes(term))),
   );
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Campo de busca sempre focado para capturar o leitor de código de barras
+  useEffect(() => {
+    const t = setInterval(() => {
+      const el = document.activeElement;
+      if (el && el !== document.body && el !== searchRef.current && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.getAttribute("role") === "dialog")) return;
+      searchRef.current?.focus();
+    }, 500);
+    return () => clearInterval(t);
+  }, []);
+  const onScan = () => {
+    const code = q.trim();
+    if (!code) return;
+    const hit = products.find((p) => p.barcode && p.barcode === code);
+    if (hit) {
+      if (!hit.available) toast.error(`${hit.name} está indisponível.`);
+      else add(hit.id, 1);
+      setQ("");
+      return;
+    }
+    if (filtered.length === 1) {
+      add(filtered[0]!.id, 1);
+      setQ("");
+    } else if (/^\d{6,}$/.test(code)) {
+      toast.error(`Código ${code} não cadastrado.`);
+      setQ("");
+    }
+  };
   const lines = useMemo(
     () => Object.entries(cart).map(([id, qty]) => ({ p: products.find((x) => x.id === id)!, qty })).filter((l) => l.p),
     [cart, products],
@@ -103,8 +132,22 @@ export function PdvPanel() {
     <div className="grid gap-4 pt-2 lg:grid-cols-[1fr_380px]">
       <div className="space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar produto…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <ScanBarcode className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary" />
+          <Input
+            ref={searchRef}
+            autoFocus
+            aria-label="Bipar código de barras ou buscar produto"
+            className="h-12 border-primary/50 pl-9 text-base"
+            placeholder="Bipe o código de barras ou busque pelo nome…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onScan();
+              }
+            }}
+          />
         </div>
         <div className="flex flex-wrap gap-1">
           <Button size="sm" variant={catId === null ? "default" : "outline"} onClick={() => setCatId(null)}>Todos</Button>
@@ -167,24 +210,24 @@ export function PdvPanel() {
           <Input placeholder="(11) 99999-9999" inputMode="tel" value={phone} onChange={(e) => setPhone(maskPhoneInput(e.target.value))} />
         </div>
 
-        <div className="grid grid-cols-3 gap-1">
-          {(["cash", "card", "pix"] as const).map((m) => (
-            <Button key={m} size="sm" variant={payment === m ? "default" : "outline"} onClick={() => setPayment(m)}>
-              {m === "cash" ? "Dinheiro" : m === "card" ? "Cartão" : "Pix"}
-            </Button>
-          ))}
-        </div>
-        {payment === "card" && (
-          <div className="grid grid-cols-2 gap-1">
-            {(["debit", "credit"] as const).map((t) => (
-              <Button key={t} size="sm" variant={cardType === t ? "secondary" : "outline"} onClick={() => setCardType(t)}>
-                {t === "debit" ? "Débito" : "Crédito"}
+        <div className="grid grid-cols-2 gap-1">
+          {([
+            ["pix", null, "Pix"],
+            ["card", "credit", "Cartão de Crédito"],
+            ["card", "debit", "Cartão de Débito"],
+            ["cash", null, "Dinheiro"],
+          ] as const).map(([m, t, label]) => {
+            const on = payment === m && (t === null || cardType === t);
+            return (
+              <Button key={label} size="sm" variant={on ? "default" : "outline"} onClick={() => { setPayment(m); if (t) setCardType(t); }}>
+                {label}
               </Button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
         {payment === "cash" && (
           <div className="space-y-1">
+            <Label>Valor entregue pelo cliente</Label>
             <Input placeholder="Valor recebido (R$)" inputMode="decimal" value={cashGiven} onChange={(e) => setCashGiven(e.target.value)} />
             <div className="flex flex-wrap gap-1">
               {[2000, 5000, 10000, 20000].map((v) => (
@@ -199,7 +242,7 @@ export function PdvPanel() {
           {feeCents > 0 && <div className="flex justify-between"><span>Entrega</span><span>{money(feeCents)}</span></div>}
           <div className="flex justify-between font-display text-xl font-extrabold"><span>Total</span><span>{money(total)}</span></div>
           {payment === "cash" && givenCents > 0 && (
-            <div className={cn("flex justify-between font-bold", change === null ? "text-destructive" : "text-success")}>
+            <div className={cn("flex justify-between rounded-lg bg-muted px-2 py-1 font-display text-2xl font-extrabold", change === null ? "text-destructive" : "text-success")}>
               <span>Troco</span><span>{change === null ? "valor insuficiente" : money(change)}</span>
             </div>
           )}

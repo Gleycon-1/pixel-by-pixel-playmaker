@@ -19,14 +19,14 @@ import {
   adminGetSettings,
   adminMoveCategory,
   adminSaveCategory,
-  adminSaveProduct,
+  adminSaveProduct, adminAddStock,
   adminSetFeaturedEnabled,
   adminToggleProduct,
 } from "@/lib/admin.functions";
 import { centsToInput, money, parseMoneyInput } from "@/lib/format";
 import { useAdmin } from "./use-admin";
 
-type Product = { id: string; category_id: string | null; name: string; description: string | null; price_cents: number; image_url: string | null; featured: boolean; available: boolean; stock: number | null };
+type Product = { id: string; category_id: string | null; name: string; description: string | null; price_cents: number; image_url: string | null; featured: boolean; available: boolean; stock: number | null; barcode: string | null };
 type Draft = Omit<Product, "id" | "price_cents" | "stock"> & { id: string | null; price: string; stock: string };
 
 export function CatalogPanel() {
@@ -48,6 +48,18 @@ export function CatalogPanel() {
   const [newCat, setNewCat] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [batch, setBatch] = useState("");
+  const addStock = useServerFn(adminAddStock);
+  const launchBatch = async () => {
+    const qty = Math.floor(Number(batch) || 0);
+    if (!draft?.id || qty <= 0) return;
+    const r = await run(() => addStock({ data: { token, id: draft.id!, qty } }), `Entrada de +${qty} un. lançada!`);
+    if (r) {
+      setBatch("");
+      setDraft((d) => (d ? { ...d, stock: String(r.stock ?? 0), available: true } : d));
+      refresh();
+    }
+  };
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["admin-catalog"] });
     void qc.invalidateQueries({ queryKey: ["catalog"] });
@@ -59,8 +71,8 @@ export function CatalogPanel() {
   const openProduct = (p?: Product) =>
     setDraft(
       p
-        ? { ...p, price: centsToInput(p.price_cents), stock: p.stock == null ? "" : String(p.stock) }
-        : { id: null, category_id: categories[0]?.id ?? null, name: "", description: "", image_url: null, featured: false, available: true, price: "", stock: "" },
+        ? { ...p, price: centsToInput(p.price_cents), stock: p.stock == null ? "" : String(p.stock), barcode: p.barcode ?? "" }
+        : { id: null, category_id: categories[0]?.id ?? null, name: "", description: "", image_url: null, featured: false, available: true, price: "", stock: "", barcode: "" },
     );
 
   const onUpload = async (file: File) => {
@@ -93,6 +105,7 @@ export function CatalogPanel() {
             featured: draft.featured,
             available: draft.available,
             stock: draft.stock.trim() === "" ? null : Math.max(0, Math.floor(Number(draft.stock) || 0)),
+            barcode: draft.barcode?.trim() || null,
           },
         }),
       "Produto salvo!",
@@ -185,6 +198,17 @@ export function CatalogPanel() {
                 <div><Label>Preço (R$)</Label><Input inputMode="decimal" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} /></div>
                 <div><Label>Estoque (vazio = sem controle)</Label><Input inputMode="numeric" value={draft.stock} onChange={(e) => setDraft({ ...draft, stock: e.target.value.replace(/\D/g, "") })} /></div>
               </div>
+              <div><Label>Código de barras (EAN)</Label><Input inputMode="numeric" placeholder="Bipe ou digite o código" value={draft.barcode ?? ""} onChange={(e) => setDraft({ ...draft, barcode: e.target.value.replace(/\s/g, "") })} /></div>
+              {draft.id && (
+                <div className="rounded-xl border border-border bg-muted/40 p-3">
+                  <Label>Entrada de mercadoria (lote)</Label>
+                  <p className="mb-2 text-xs text-muted-foreground">Some de uma vez a quantidade que chegou. Estoque atual: {draft.stock || "sem controle"}</p>
+                  <div className="flex gap-2">
+                    <Input inputMode="numeric" placeholder="Ex.: 2000" value={batch} onChange={(e) => setBatch(e.target.value.replace(/\D/g, ""))} />
+                    <Button type="button" onClick={launchBatch} disabled={!batch}>+ Lançar</Button>
+                  </div>
+                </div>
+              )}
               <div>
                 <Label>Categoria</Label>
                 <Select value={draft.category_id ?? ""} onValueChange={(v) => setDraft({ ...draft, category_id: v })}>

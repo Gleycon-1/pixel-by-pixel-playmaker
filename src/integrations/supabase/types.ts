@@ -416,6 +416,7 @@ export type Database = {
       products: {
         Row: {
           available: boolean
+          barcode: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -429,6 +430,7 @@ export type Database = {
         }
         Insert: {
           available?: boolean
+          barcode?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -442,6 +444,7 @@ export type Database = {
         }
         Update: {
           available?: boolean
+          barcode?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -567,6 +570,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_stock: { Args: { p_product: string; p_qty: number }; Returns: number }
       adjust_cashback: {
         Args: { p_customer: string; p_delta: number }
         Returns: number
