@@ -5,13 +5,16 @@ import { Bell, BellOff, Clock, MapPin, Minus, Plus, Printer, X } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { adminCouriers, adminGetSettings, adminOrders, adminQuickSettings, adminSetOrderEta, adminSetOrderStatus } from "@/lib/admin.functions";
+import { adminCouriers, adminGetSettings, adminOrders, adminQuickSettings, adminSetOrderEta, adminSetOrderGps, adminSetOrderStatus } from "@/lib/admin.functions";
 import { courierMessage, paymentTag, receiptMessage } from "@/lib/admin-messages";
 import { dateTime, money, phoneDisplay } from "@/lib/format";
 import { etaDeadline, formatAddress, mapsLinkFor, type OrderDTO } from "@/lib/order-dto";
 import { storeInfo, waLink } from "@/lib/store-info";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "./use-admin";
+import { Switch } from "@/components/ui/switch";
+import { LiveMap, orderMapPoints } from "@/components/map/LiveMap";
+import { deliveryPin } from "@/lib/rules";
 import { beep, printReceipt, unlockAudio } from "./receipt";
 import { residenceTypeLabel } from "@/lib/address";
 
@@ -77,7 +80,7 @@ export function OrdersBoard() {
   const s = settings.data;
   const storeName = storeInfo(s ?? null).name;
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-orders"] });
-  const setQuick = async (patch: { store_mode?: "open" | "closed" | "auto"; eta_minutes?: number }) => {
+  const setQuick = async (patch: { store_mode?: "open" | "closed" | "auto"; eta_minutes?: number; require_delivery_pin?: boolean }) => {
     await run(() => quick({ data: { ...patch, token } }));
     void qc.invalidateQueries({ queryKey: ["admin-settings"] });
   };
@@ -91,6 +94,10 @@ export function OrdersBoard() {
             {m === "open" ? "Aberta" : m === "closed" ? "Fechada" : `Automático (${s?.open_time ?? ""}–${s?.close_time ?? ""})`}
           </Button>
         ))}
+        <label className="ml-2 flex items-center gap-2 rounded-lg border border-border px-2 py-1 text-sm font-bold">
+          <Switch checked={!!s?.require_delivery_pin} onCheckedChange={(v) => setQuick({ require_delivery_pin: v })} aria-label="Exigir código de confirmação nas entregas" />
+          Exigir código de confirmação nas entregas
+        </label>
         <span className="ml-2 flex items-center gap-1 text-sm font-bold"><Clock className="size-4" /> Entrega em até</span>
         <Button size="icon" variant="outline" className="size-8" aria-label="Diminuir tempo" onClick={() => s && setQuick({ eta_minutes: Math.max(5, s.eta_minutes - 5) })}><Minus /></Button>
         <span className="min-w-14 text-center font-display text-lg font-extrabold">{s?.eta_minutes ?? "–"} min</span>
@@ -131,12 +138,14 @@ export function OrdersBoard() {
   );
 }
 
-type Courier = { id: string; name: string; whatsapp: string; active: boolean; plate: string | null };
+type Courier = { id: string; name: string; whatsapp: string; active: boolean; plate: string | null; access_token: string };
 
 function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers: Courier[]; storeName: string; onChange: () => void }) {
   const { token, run } = useAdmin();
   const setStatus = useServerFn(adminSetOrderStatus);
   const setEta = useServerFn(adminSetOrderEta);
+  const setGps = useServerFn(adminSetOrderGps);
+  const pin = deliveryPin(o.customer_phone);
   const [courierId, setCourierId] = useState<string>(o.courier_id ?? "");
   const tag = paymentTag(o);
   const isDelivery = o.fulfillment === "delivery";
@@ -153,7 +162,8 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
     // abre a janela antes do await para não ser bloqueada
     const w = window.open("", "_blank");
     const r = await go("out_for_delivery", c.id);
-    if (r && w) w.location.href = waLink(c.whatsapp, courierMessage(o, storeName));
+    const link = `${window.location.origin}/motoboy/${c.access_token}`;
+    if (r && w) w.location.href = waLink(c.whatsapp, courierMessage(o, storeName, link));
     else w?.close();
   };
 
@@ -189,6 +199,9 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
       ) : (
         <p className="mt-1 text-xs font-bold text-accent">RETIRADA NA LOJA</p>
       )}
+      {isDelivery && pin && !["delivered", "cancelled"].includes(o.status) && (
+        <p className="mt-1 text-xs">🔑 Código de entrega: <b className="font-display text-base tracking-widest">{pin}</b></p>
+      )}
       <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
         {o.order_items.map((i) => (
           <li key={i.id}>{i.quantity}x {i.name}</li>
@@ -205,6 +218,18 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
         </div>
       )}
 
+      {isDelivery && !["delivered", "cancelled"].includes(o.status) && (
+        <label className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-2 py-1.5 text-xs font-bold">
+          Rastrear entrega via GPS
+          <span className="flex items-center gap-1">
+            {o.gps_tracking ? "SIM" : "NÃO"}
+            <Switch checked={o.gps_tracking} aria-label="Rastrear entrega via GPS" onCheckedChange={async (v) => { if (await run(() => setGps({ data: { token, orderId: o.id, enabled: v } }))) onChange(); }} />
+          </span>
+        </label>
+      )}
+      {isDelivery && o.gps_tracking && o.status === "out_for_delivery" && (
+        <div className="mt-2"><LiveMap {...orderMapPoints(o)} updatedAt={o.courier_location_at} /></div>
+      )}
       <div className="mt-3 flex flex-col gap-2">
         {o.status === "received" && <Button size="sm" onClick={() => go("preparing")}>Aceitar pedido</Button>}
         {o.status === "preparing" && isDelivery && (

@@ -97,3 +97,39 @@ export function normalizePhone(input: string): string | null {
   if (!/^55\d{10,11}$/.test(d)) return null;
   return d;
 }
+
+/** PIN de entrega: últimos 4 dígitos do celular do cliente. */
+export function deliveryPin(phone: string | null | undefined) {
+  const d = (phone ?? "").replace(/\D/g, "");
+  return d.length >= 4 ? d.slice(-4) : null;
+}
+
+/** Telefone com os 4 últimos dígitos ocultos, ex.: (11) 98765-****. */
+export function maskPhoneTail(phone: string | null | undefined) {
+  let d = (phone ?? "").replace(/\D/g, "");
+  if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
+  if (d.length < 8) return "****";
+  const ddd = d.length >= 10 ? `(${d.slice(0, 2)}) ` : "";
+  const body = d.length >= 10 ? d.slice(2) : d;
+  return `${ddd}${body.slice(0, body.length - 4)}-****`;
+}
+
+export type SalesRow = { source: string; payment_method: string; card_type: string | null; total_cents: number };
+export const SALES_METHODS = ["pix", "credit", "debit", "cash"] as const;
+/** Une vendas do app (online) e do PDV (balcão/WhatsApp) e separa por meio de pagamento. */
+export function summarizeSales(rows: SalesRow[]) {
+  const empty = () => ({ count: 0, cents: 0 });
+  const byMethod = { pix: empty(), credit: empty(), debit: empty(), cash: empty() };
+  const byChannel = { app: empty(), pdv: empty() };
+  let total = 0;
+  for (const r of rows) {
+    const m = r.payment_method === "card" ? (r.card_type === "credit" ? "credit" : "debit") : (r.payment_method as "pix" | "cash");
+    const ch = r.source === "online" ? "app" : "pdv";
+    byMethod[m].count++;
+    byMethod[m].cents += r.total_cents;
+    byChannel[ch].count++;
+    byChannel[ch].cents += r.total_cents;
+    total += r.total_cents;
+  }
+  return { totalCents: total, count: rows.length, byMethod, byChannel };
+}

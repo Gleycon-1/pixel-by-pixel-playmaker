@@ -8,6 +8,7 @@ import { adminCourierReport } from "@/lib/admin.functions";
 import { dateTime, money, PAYMENT_LABEL } from "@/lib/format";
 import { waLink } from "@/lib/store-info";
 import { useAdmin } from "./use-admin";
+import { SalesReport } from "./SalesReport";
 
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 
@@ -31,6 +32,8 @@ export function ReportPanel() {
 
   return (
     <div className="space-y-4 pt-2">
+      <SalesReport />
+      <h2 className="font-display text-lg font-extrabold">Total a acertar com motoboys</h2>
       <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
         <div><Label>De</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div><Label>Até</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>

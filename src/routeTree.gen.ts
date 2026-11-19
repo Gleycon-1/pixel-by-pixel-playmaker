@@ -16,6 +16,7 @@ import { Route as ContaRouteImport } from './routes/conta'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as MediaSplatRouteImport } from './routes/media.$'
+import { Route as MotoboyTokenRouteImport } from './routes/motoboy.$token'
 import { Route as PedidosIndexRouteImport } from './routes/pedidos.index'
 import { Route as PedidosIdRouteImport } from './routes/pedidos.$id'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api/public/mercadopago-webhook'
@@ -55,6 +56,11 @@ const MediaSplatRoute = MediaSplatRouteImport.update({
   path: '/media/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MotoboyTokenRoute = MotoboyTokenRouteImport.update({
+  id: '/motoboy/$token',
+  path: '/motoboy/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PedidosIndexRoute = PedidosIndexRouteImport.update({
   id: '/pedidos/',
   path: '/pedidos/',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
+  '/motoboy/$token': typeof MotoboyTokenRoute
   '/pedidos/$id': typeof PedidosIdRoute
   '/pedidos/': typeof PedidosIndexRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
+  '/motoboy/$token': typeof MotoboyTokenRoute
   '/pedidos/$id': typeof PedidosIdRoute
   '/pedidos': typeof PedidosIndexRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/media/$': typeof MediaSplatRoute
+  '/motoboy/$token': typeof MotoboyTokenRoute
   '/pedidos/$id': typeof PedidosIdRoute
   '/pedidos/': typeof PedidosIndexRoute
   '/api/public/mercadopago-webhook': typeof ApiPublicMercadopagoWebhookRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
+    | '/motoboy/$token'
     | '/pedidos/$id'
     | '/pedidos/'
     | '/api/public/mercadopago-webhook'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
+    | '/motoboy/$token'
     | '/pedidos/$id'
     | '/pedidos'
     | '/api/public/mercadopago-webhook'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/manifest.webmanifest'
     | '/media/$'
+    | '/motoboy/$token'
     | '/pedidos/$id'
     | '/pedidos/'
     | '/api/public/mercadopago-webhook'
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   MediaSplatRoute: typeof MediaSplatRoute
+  MotoboyTokenRoute: typeof MotoboyTokenRoute
   PedidosIdRoute: typeof PedidosIdRoute
   PedidosIndexRoute: typeof PedidosIndexRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/motoboy/$token': {
+      id: '/motoboy/$token'
+      path: '/motoboy/$token'
+      fullPath: '/motoboy/$token'
+      preLoaderRoute: typeof MotoboyTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pedidos/': {
       id: '/pedidos/'
       path: '/pedidos'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   MediaSplatRoute: MediaSplatRoute,
+  MotoboyTokenRoute: MotoboyTokenRoute,
   PedidosIdRoute: PedidosIdRoute,
   PedidosIndexRoute: PedidosIndexRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,

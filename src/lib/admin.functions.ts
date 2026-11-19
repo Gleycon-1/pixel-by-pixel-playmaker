@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createAdminSession, endAdminSession, requireAdmin } from "./session.server";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { creditCashbackIfNeeded, transitionOrder } from "./orders.server";
-import { calcChange, normalizePhone } from "./rules";
+import { calcChange, normalizePhone, summarizeSales } from "./rules";
 import { lookupCep, geocode } from "./geo.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -363,6 +363,7 @@ export const adminQuickSettings = createServerFn({ method: "POST" })
       accept_pix: z.boolean().optional(),
       accept_card: z.boolean().optional(),
       accept_cash: z.boolean().optional(),
+      require_delivery_pin: z.boolean().optional(),
     }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -372,6 +373,42 @@ export const adminQuickSettings = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("store_settings").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1);
     if (error) throw new Error("Não foi possível salvar.");
     return { ok: true };
+  });
+
+export const adminSetOrderGps = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ orderId: z.string().uuid(), enabled: z.boolean() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const patch = data.enabled
+      ? { gps_tracking: true }
+      : { gps_tracking: false, courier_lat: null, courier_lng: null, courier_location_at: null };
+    await supabaseAdmin.from("orders").update(patch).eq("id", data.orderId);
+    return { ok: true };
+  });
+
+export const adminRegenerateCourierLink = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const bytes = crypto.getRandomValues(new Uint8Array(18));
+    const t = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    await supabaseAdmin.from("couriers").update({ access_token: t }).eq("id", data.id);
+    return { ok: true };
+  });
+
+export const adminSalesReport = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ from: z.string(), to: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const { data: rows } = await supabaseAdmin
+      .from("orders")
+      .select("source,payment_method,card_type,total_cents,delivery_fee_cents")
+      .neq("status", "cancelled")
+      .neq("status", "awaiting_payment")
+      .gte("created_at", data.from)
+      .lte("created_at", data.to)
+      .limit(20000);
+    return summarizeSales(rows ?? []);
   });
 
 export const adminSetOrderEta = createServerFn({ method: "POST" })

@@ -19,6 +19,8 @@ import { useSession } from "@/stores/session";
 import { useHydrated } from "@/stores/hydration";
 import { STORE_CONFIG } from "@/store.config";
 import { residenceTypeLabel } from "@/lib/address";
+import { deliveryPin } from "@/lib/rules";
+import { LiveMap, orderMapPoints } from "@/components/map/LiveMap";
 
 export const Route = createFileRoute("/pedidos/$id")({
   head: () => ({
@@ -164,7 +166,17 @@ function OrderPage() {
                   🛵 Seu pedido será entregue em até {o.eta_minutes} min (previsão {etaDeadline(o)})
                 </p>
               )}
+              {o.fulfillment === "delivery" && deliveryPin(o.customer_phone) && !["delivered", "cancelled"].includes(o.status) && (
+                <div className="mb-3 rounded-xl border border-primary/40 bg-primary/10 p-3 text-center">
+                  <p className="text-xs font-bold uppercase text-primary">Código de entrega</p>
+                  <p className="font-display text-3xl font-extrabold tracking-[0.4em]">{deliveryPin(o.customer_phone)}</p>
+                  <p className="text-xs text-muted-foreground">São os 4 últimos dígitos do seu celular. Informe ao motoboy só quando receber o pedido.</p>
+                </div>
+              )}
               <StatusTimeline status={o.status} fulfillment={o.fulfillment} />
+              {o.fulfillment === "delivery" && o.gps_tracking && o.status === "out_for_delivery" && (
+                <div className="mt-4"><LiveMap {...orderMapPoints(o)} updatedAt={o.courier_location_at} /></div>
+              )}
               {o.status === "delivered" && o.cashback_earned_cents > 0 && (
                 <p className="mt-4 rounded-xl bg-accent/10 p-3 text-sm text-accent">🎉 Você ganhou {money(o.cashback_earned_cents)} de cashback neste pedido!</p>
               )}

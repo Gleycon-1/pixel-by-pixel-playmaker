@@ -1,3 +1,4 @@
+import { maskPhoneTail } from "./rules";
 import { money, PAYMENT_LABEL, phoneDisplay } from "./format";
 import { formatAddress, mapsLinkFor, type OrderDTO } from "./order-dto";
 import { residenceTypeLabel } from "./address";
@@ -20,13 +21,15 @@ function amountToCollect(o: OrderDTO) {
   return `💵 Cobrar ${money(o.total_cents)} em dinheiro (sem troco)`;
 }
 
-export function courierMessage(o: OrderDTO, storeName: string) {
+export function courierMessage(o: OrderDTO, storeName: string, panelLink?: string) {
   const a = o.address;
   return [
     `🛵 *ENTREGA #${o.code}* — ${storeName}`,
     ``,
+    panelLink ? `📲 *Abra suas entregas:* ${panelLink}` : null,
+    panelLink ? `` : null,
     `👤 *Cliente:* ${o.customer_name}`,
-    `📞 ${phoneDisplay(o.customer_phone)}`,
+    panelLink ? `📞 ${maskPhoneTail(o.customer_phone)} (ligue pelo painel)` : `📞 ${phoneDisplay(o.customer_phone)}`,
     `🏠 *Endereço:* ${formatAddress(a)}`,
     a ? `🏡 *Tipo de imóvel:* ${residenceTypeLabel(a.residence_type)}` : null,
     a?.reference ? `📌 Ref: ${a.reference}` : null,

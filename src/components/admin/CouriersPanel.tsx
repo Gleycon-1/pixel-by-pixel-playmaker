@@ -5,7 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { adminCouriers, adminDeleteCourier, adminSaveCourier } from "@/lib/admin.functions";
+import { adminCouriers, adminDeleteCourier, adminRegenerateCourierLink, adminSaveCourier } from "@/lib/admin.functions";
 import { maskPhoneInput, phoneDisplay } from "@/lib/format";
 import { waLink } from "@/lib/store-info";
 import { useAdmin } from "./use-admin";
@@ -19,6 +19,8 @@ export function CouriersPanel() {
   const list = useServerFn(adminCouriers);
   const save = useServerFn(adminSaveCourier);
   const del = useServerFn(adminDeleteCourier);
+  const regen = useServerFn(adminRegenerateCourierLink);
+  const linkFor = (t: string) => `${window.location.origin}/motoboy/${t}`;
   const couriers = useQuery({ queryKey: ["admin-couriers"], queryFn: () => list({ data: { token } }) });
   const [f, setF] = useState<Form>(EMPTY);
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-couriers"] });
@@ -56,7 +58,8 @@ export function CouriersPanel() {
               <p className="font-bold">{c.name} {!c.active && <span className="text-xs text-muted-foreground">(inativo)</span>}</p>
               <p className="text-xs text-muted-foreground">{c.plate || "sem placa"} · {phoneDisplay(c.whatsapp)}</p>
             </div>
-            <Button size="sm" variant="outline" asChild><a href={waLink(c.whatsapp, "Olá!")} target="_blank" rel="noreferrer">WhatsApp</a></Button>
+            <Button size="sm" variant="outline" onClick={() => window.open(waLink(c.whatsapp, `Seu painel de entregas: ${linkFor(c.access_token)}`), "_blank")}>Enviar link</Button>
+            <Button size="sm" variant="ghost" title="Gera um link novo e invalida o antigo" onClick={async () => confirm("Gerar novo link? O anterior deixa de funcionar.") && (await run(() => regen({ data: { token, id: c.id } }), "Novo link gerado!")) && refresh()}>Novo link</Button>
             <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setF({ id: c.id, name: c.name, plate: c.plate ?? "", whatsapp: maskPhoneInput(c.whatsapp.replace(/^55/, "")), active: c.active })}><Pencil /></Button>
             <Button size="icon" variant="ghost" className="text-destructive" aria-label="Excluir" onClick={async () => confirm(`Excluir ${c.name}?`) && (await run(() => del({ data: { token, id: c.id } }))) && refresh()}><Trash2 /></Button>
           </div>

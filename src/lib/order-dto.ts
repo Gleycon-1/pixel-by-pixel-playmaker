@@ -1,7 +1,7 @@
 import type { ResidenceType } from "./address";
 
 export const ORDER_SELECT =
-  "id, code, customer_id, customer_name, customer_phone, status, fulfillment, address, distance_km, billed_km, subtotal_cents, delivery_fee_cents, cashback_used_cents, cashback_earned_cents, total_cents, payment_method, card_type, cash_change_for_cents, change_due_cents, notes, pix_qr_code, paid_at, courier_id, dispatched_at, delivered_at, cancelled_at, created_at, source, eta_minutes, order_items(id, product_id, name, unit_price_cents, quantity)";
+  "id, code, customer_id, customer_name, customer_phone, status, fulfillment, address, distance_km, billed_km, subtotal_cents, delivery_fee_cents, cashback_used_cents, cashback_earned_cents, total_cents, payment_method, card_type, cash_change_for_cents, change_due_cents, notes, pix_qr_code, paid_at, courier_id, dispatched_at, delivered_at, cancelled_at, created_at, source, eta_minutes, gps_tracking, courier_lat, courier_lng, courier_location_at, order_items(id, product_id, name, unit_price_cents, quantity)";
 
 export type OrderAddress = {
   residence_type?: ResidenceType | null;
@@ -55,6 +55,10 @@ export type OrderDTO = {
   created_at: string;
   source: string;
   eta_minutes: number | null;
+  gps_tracking: boolean;
+  courier_lat: number | null;
+  courier_lng: number | null;
+  courier_location_at: string | null;
   order_items: OrderItemDTO[];
 };
 
