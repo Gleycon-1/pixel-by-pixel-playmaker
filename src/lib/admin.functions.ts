@@ -307,6 +307,7 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
       allow_pickup: z.boolean(),
       pix_test_mode: z.boolean(),
       featured_enabled: z.boolean(),
+      require_delivery_pin: z.boolean(),
       store_mode: z.enum(["open", "closed", "auto"]),
       open_time: z.string().regex(/^\d{2}:\d{2}$/),
       close_time: z.string().regex(/^\d{2}:\d{2}$/),

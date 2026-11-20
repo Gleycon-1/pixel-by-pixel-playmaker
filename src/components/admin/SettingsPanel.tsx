@@ -56,6 +56,7 @@ export function SettingsPanel() {
       allow_pickup: s.allow_pickup,
       pix_test_mode: s.pix_test_mode,
       featured_enabled: s.featured_enabled,
+      require_delivery_pin: s.require_delivery_pin,
     });
     setF(form);
   }, [q.data, f]);
@@ -97,6 +98,7 @@ export function SettingsPanel() {
             allow_pickup: !!f["allow_pickup"],
             pix_test_mode: !!f["pix_test_mode"],
             featured_enabled: !!f["featured_enabled"],
+            require_delivery_pin: !!f["require_delivery_pin"],
           },
         }),
       "Configurações salvas!",
@@ -128,6 +130,7 @@ export function SettingsPanel() {
             </Button>
           ))}
         </div>
+        {toggle("require_delivery_pin", "Exigir Código de Confirmação nas Entregas")}
         <div className="grid grid-cols-3 gap-2">
           {field("open_time", "Abre às", { type: "time" })}
           {field("close_time", "Fecha às", { type: "time" })}
