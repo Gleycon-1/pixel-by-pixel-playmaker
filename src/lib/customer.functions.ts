@@ -18,14 +18,6 @@ function phoneOrThrow(raw: string) {
   return p;
 }
 
-export const checkPhone = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ phone: phoneSchema }).parse(d))
-  .handler(async ({ data }) => {
-    const phone = phoneOrThrow(data.phone);
-    const { data: c } = await supabaseAdmin.from("customers").select("id").eq("phone", phone).maybeSingle();
-    return { exists: !!c, phone };
-  });
-
 export const registerCustomer = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({ phone: phoneSchema, name: z.string().trim().min(2).max(80), pin: pinSchema }).parse(d),
@@ -38,7 +30,6 @@ export const registerCustomer = createServerFn({ method: "POST" })
       p_pin: data.pin,
     });
     if (error || !id) {
-      if (error?.code === "23505") throw new Error("Esse WhatsApp já tem cadastro. Entre com seu PIN.");
       throw new Error("Não foi possível criar seu cadastro.");
     }
     return { token: await createCustomerSession(id as string) };
@@ -57,8 +48,8 @@ export const loginCustomer = createServerFn({ method: "POST" })
     if (res.status === "locked") {
       return { ok: false as const, locked: true, lockedUntil: res.locked_until ?? null, attemptsLeft: 0 };
     }
-    if (res.status === "not_found") return { ok: false as const, locked: false, lockedUntil: null, attemptsLeft: -1 };
-    return { ok: false as const, locked: false, lockedUntil: null, attemptsLeft: res.attempts_left ?? 0 };
+    // Resposta idêntica para número inexistente e PIN errado: não revela quem tem cadastro.
+    return { ok: false as const, locked: false, lockedUntil: null };
   });
 
 export const logoutCustomer = createServerFn({ method: "POST" })

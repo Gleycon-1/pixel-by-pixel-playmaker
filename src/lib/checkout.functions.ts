@@ -210,14 +210,15 @@ export const refreshPixStatus = createServerFn({ method: "POST" })
     return { status: o.status };
   });
 
-/** Apenas em modo teste: simula a confirmação do Pix. */
+/** Apenas em modo teste e somente pela equipe (sessão de admin): simula a confirmação do Pix. */
 export const simulatePixApproval = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token: tokenSchema, id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    const c = await requireCustomer(data.token);
+    const { requireAdmin } = await import("./session.server");
+    await requireAdmin(data.token);
     const s = await loadSettings();
     if (!s.pix_test_mode) throw new Error("Simulação disponível apenas no modo teste.");
-    const { data: o } = await supabaseAdmin.from("orders").select("id").eq("id", data.id).eq("customer_id", c.id).maybeSingle();
+    const { data: o } = await supabaseAdmin.from("orders").select("id").eq("id", data.id).eq("status", "awaiting_payment").maybeSingle();
     if (!o) throw new Error("Pedido não encontrado.");
     await markOrderPaid(o.id);
     return { ok: true };

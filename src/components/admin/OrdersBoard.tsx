@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { adminCouriers, adminGetSettings, adminOrders, adminQuickSettings, adminSetOrderEta, adminSetOrderGps, adminSetOrderStatus } from "@/lib/admin.functions";
+import { simulatePixApproval } from "@/lib/checkout.functions";
 import { courierMessage, paymentTag, receiptMessage } from "@/lib/admin-messages";
 import { dateTime, money, phoneDisplay } from "@/lib/format";
 import { etaDeadline, formatAddress, mapsLinkFor, type OrderDTO } from "@/lib/order-dto";
@@ -126,7 +127,7 @@ export function OrdersBoard() {
               </h2>
               <div className="mt-1 flex flex-col gap-2">
                 {list.map((o) => (
-                  <OrderCard key={o.id} o={o} couriers={couriers.data ?? []} storeName={storeName} onChange={refresh} />
+                  <OrderCard key={o.id} o={o} couriers={couriers.data ?? []} storeName={storeName} pixTestMode={!!settings.data?.pix_test_mode} onChange={refresh} />
                 ))}
                 {!list.length && <p className="px-2 py-6 text-center text-xs text-muted-foreground">Nenhum pedido</p>}
               </div>
@@ -140,11 +141,12 @@ export function OrdersBoard() {
 
 type Courier = { id: string; name: string; whatsapp: string; active: boolean; plate: string | null; access_token: string };
 
-function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers: Courier[]; storeName: string; onChange: () => void }) {
+function OrderCard({ o, couriers, storeName, pixTestMode, onChange }: { o: OrderDTO; couriers: Courier[]; storeName: string; pixTestMode: boolean; onChange: () => void }) {
   const { token, run } = useAdmin();
   const setStatus = useServerFn(adminSetOrderStatus);
   const setEta = useServerFn(adminSetOrderEta);
   const setGps = useServerFn(adminSetOrderGps);
+  const approvePix = useServerFn(simulatePixApproval);
   const pin = deliveryPin(o.customer_phone);
   const [courierId, setCourierId] = useState<string>(o.courier_id ?? "");
   const tag = paymentTag(o);
@@ -231,6 +233,9 @@ function OrderCard({ o, couriers, storeName, onChange }: { o: OrderDTO; couriers
         <div className="mt-2"><LiveMap {...orderMapPoints(o)} updatedAt={o.courier_location_at} /></div>
       )}
       <div className="mt-3 flex flex-col gap-2">
+        {o.status === "awaiting_payment" && pixTestMode && (
+          <Button size="sm" variant="outline" onClick={async () => { if (await run(() => approvePix({ data: { token, id: o.id } }))) onChange(); }}>Aprovar Pix (modo teste)</Button>
+        )}
         {o.status === "received" && <Button size="sm" onClick={() => go("preparing")}>Aceitar pedido</Button>}
         {o.status === "preparing" && isDelivery && (
           <div className="flex gap-1">

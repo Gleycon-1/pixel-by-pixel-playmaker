@@ -14,6 +14,8 @@ const withToken = <T extends z.ZodRawShape>(shape: T) => z.object({ token, ...sh
 export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ password: z.string().min(1).max(100) }).parse(d))
   .handler(async ({ data }) => {
+    // A senha inicial publicada no código nunca é aceita.
+    if (data.password === "adega2026") return { ok: false as const, message: "Senha incorreta." };
     const { data: r, error } = await supabaseAdmin.rpc("admin_verify_password", { p_password: data.password });
     if (error) throw new Error("Não foi possível entrar agora.");
     const res = r as { status: string; locked_until?: string };
@@ -41,7 +43,7 @@ export const adminCheck = createServerFn({ method: "POST" })
   });
 
 export const adminChangePassword = createServerFn({ method: "POST" })
-  .inputValidator((d) => withToken({ newPassword: z.string().min(6).max(100) }).parse(d))
+  .inputValidator((d) => withToken({ newPassword: z.string().min(8).max(100).refine((v) => v !== "adega2026", "Escolha uma senha diferente da inicial.") }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
     const { error } = await supabaseAdmin.rpc("admin_set_password", { p_password: data.newPassword });

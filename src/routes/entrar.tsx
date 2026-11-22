@@ -1,3 +1,4 @@
+import { normalizePhone } from "@/lib/rules";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -7,7 +8,7 @@ import { PageShell } from "@/components/store/PageShell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { checkPhone, loginCustomer, registerCustomer } from "@/lib/customer.functions";
+import { loginCustomer, registerCustomer } from "@/lib/customer.functions";
 import { maskPhoneInput, phoneDisplay } from "@/lib/format";
 import { useSession } from "@/stores/session";
 import { STORE_CONFIG } from "@/store.config";
@@ -49,7 +50,6 @@ function LoginPage() {
   const qc = useQueryClient();
   const setToken = useSession((s) => s.setCustomerToken);
   const setLastPhone = useSession((s) => s.setLastPhone);
-  const check = useServerFn(checkPhone);
   const login = useServerFn(loginCustomer);
   const register = useServerFn(registerCustomer);
 
@@ -74,9 +74,10 @@ function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      const r = await check({ data: { phone } });
-      setNormalized(r.phone);
-      setStep(r.exists ? "pin" : "register");
+      const p = normalizePhone(phone);
+      if (!p) throw new Error("Número de WhatsApp inválido. Use DDD + número.");
+      setNormalized(p);
+      setStep("pin");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -95,10 +96,8 @@ function LoginPage() {
       if (r.locked) {
         const until = r.lockedUntil ? new Date(r.lockedUntil).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
         setError(`Acesso bloqueado por 15 minutos após 5 tentativas erradas${until ? ` (libera às ${until})` : ""}.`);
-      } else if (r.attemptsLeft === -1) {
-        setStep("register");
       } else {
-        setError(`PIN incorreto. ${r.attemptsLeft} tentativa(s) restante(s) antes do bloqueio.`);
+        setError("WhatsApp ou PIN incorreto. Primeiro acesso? Crie seu cadastro abaixo.");
       }
     } catch (e) {
       setError((e as Error).message);
@@ -116,8 +115,8 @@ function LoginPage() {
     try {
       const r = await register({ data: { phone: normalized, name: name.trim(), pin } });
       done(r.token);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch {
+      setError("Não foi possível criar o cadastro. Se você já tem conta, entre com seu PIN.");
     } finally {
       setBusy(false);
     }
@@ -176,6 +175,9 @@ function LoginPage() {
             <Button type="submit" variant="hero" size="xl" className="w-full" disabled={busy || pin.length !== 4}>
               {busy ? <Loader2 className="animate-spin" /> : "Entrar"}
             </Button>
+            <button type="button" className="text-sm font-bold text-primary underline" onClick={() => { setStep("register"); setPin(""); setError(null); }}>
+              Primeiro acesso? Criar cadastro
+            </button>
             <button type="button" className="text-sm text-muted-foreground underline" onClick={() => { setStep("phone"); setPin(""); setError(null); }}>
               Trocar número
             </button>

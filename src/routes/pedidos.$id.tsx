@@ -3,14 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Copy, FlaskConical, Loader2, MapPin } from "lucide-react";
+import { Copy, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/store/PageShell";
 import { StatusBadge, StatusTimeline } from "@/components/store/OrderBits";
 import { WhatsAppIcon } from "@/components/store/icons";
 import { Button } from "@/components/ui/button";
 import { getMyOrder } from "@/lib/customer.functions";
-import { refreshPixStatus, simulatePixApproval } from "@/lib/checkout.functions";
+import { refreshPixStatus } from "@/lib/checkout.functions";
 import { catalogQuery } from "@/lib/catalog.functions";
 import { dateTime, money, PAYMENT_LABEL } from "@/lib/format";
 import { etaDeadline, formatAddress } from "@/lib/order-dto";
@@ -40,9 +40,7 @@ export const Route = createFileRoute("/pedidos/$id")({
 function PixBox({ orderId, code, total, testMode }: { orderId: string; code: string; total: number; testMode: boolean }) {
   const token = useSession((s) => s.customerToken);
   const qc = useQueryClient();
-  const simulate = useServerFn(simulatePixApproval);
   const [img, setImg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     QRCode.toDataURL(code, { margin: 1, width: 280 }).then(setImg).catch(() => setImg(null));
@@ -81,26 +79,7 @@ function PixBox({ orderId, code, total, testMode }: { orderId: string; code: str
         <Loader2 className="size-3 animate-spin" /> Aguardando confirmação do pagamento…
       </p>
       {testMode && (
-        <Button
-          variant="success"
-          className="mt-4 w-full"
-          disabled={busy}
-          onClick={async () => {
-            if (!token) return;
-            setBusy(true);
-            try {
-              await simulate({ data: { token, id: orderId } });
-              toast.success("Pix aprovado (simulação)!");
-              qc.invalidateQueries({ queryKey: ["order", orderId] });
-            } catch (e) {
-              toast.error((e as Error).message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <FlaskConical /> Simular Aprovação Pix (modo teste)
-        </Button>
+        <p className="mt-3 text-center text-xs text-muted-foreground">Modo teste: a loja confirma o pagamento pelo painel.</p>
       )}
     </div>
   );
