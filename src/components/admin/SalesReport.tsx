@@ -68,6 +68,27 @@ export function SalesReport() {
               <Card key={k} label={label} value={money(d.byMethod[k].cents)} sub={`${d.byMethod[k].count} vendas`} />
             ))}
           </div>
+          <div className="rounded-xl border border-border p-3">
+            <div className="mb-3">
+              <h3 className="font-display font-extrabold">Faturamento por categoria</h3>
+              <p className="text-xs text-muted-foreground">Produtos vendidos no período, sem taxas de entrega.</p>
+            </div>
+            {d.byCategory.length ? (
+              <div className="divide-y divide-border">
+                {d.byCategory.map((category) => (
+                  <div key={category.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">{category.name}</p>
+                      <p className="text-xs text-muted-foreground">{category.quantity} {category.quantity === 1 ? "unidade" : "unidades"}</p>
+                    </div>
+                    <p className="font-display text-lg font-extrabold">{money(category.cents)}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhum produto vendido no período.</p>
+            )}
+          </div>
         </>
       )}
     </section>

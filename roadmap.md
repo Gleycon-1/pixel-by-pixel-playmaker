@@ -9,3 +9,7 @@
 - [x] PIN de entrega = últimos 4 dígitos do cliente + chave "Exigir código"
 - [x] Link do motoboy: telefone mascarado, botão Ligar/WhatsApp, concluir entrega
 - [x] Rastreio GPS opcional por pedido (desligado por padrão) com mapa para loja e cliente
+## Relatório financeiro e PDV avulso
+- [x] Manter balcão sem cadastro obrigatório; dados do cliente continuam opcionais
+- [x] Consolidar Delivery + PDV por dia, mês e ano e por forma de pagamento
+- [x] Detalhar faturamento por categoria de produto no período selecionado

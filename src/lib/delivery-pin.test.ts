@@ -12,7 +12,7 @@ describe("PIN de entrega", () => {
   });
 });
 
-import { summarizeSales } from "./rules";
+import { summarizeSales, summarizeSalesByCategory } from "./rules";
 describe("faturamento unificado", () => {
   it("soma app e PDV e separa crédito/débito", () => {
     const r = summarizeSales([
@@ -26,5 +26,23 @@ describe("faturamento unificado", () => {
     expect(r.byChannel.pdv.cents).toBe(2800);
     expect(r.byMethod.credit.cents).toBe(2000);
     expect(r.byMethod.debit.cents).toBe(500);
+  });
+
+  it("soma quantidade e valor dos produtos por categoria, sem incluir frete", () => {
+    const result = summarizeSalesByCategory(
+      [
+        { product_id: "cerveja", quantity: 2, unit_price_cents: 1000 },
+        { product_id: "cerveja", quantity: 1, unit_price_cents: 500 },
+        { product_id: "whisky", quantity: 2, unit_price_cents: 2000 },
+        { product_id: null, quantity: 1, unit_price_cents: 300 },
+      ],
+      { cerveja: "bebidas", whisky: "destilados" },
+      { bebidas: "Bebidas", destilados: "Destilados" },
+    );
+    expect(result).toEqual([
+      { id: "destilados", name: "Destilados", cents: 4000, quantity: 2 },
+      { id: "bebidas", name: "Bebidas", cents: 2500, quantity: 3 },
+      { id: "sem-categoria", name: "Sem categoria", cents: 300, quantity: 1 },
+    ]);
   });
 });

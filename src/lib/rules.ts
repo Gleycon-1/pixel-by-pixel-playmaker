@@ -115,6 +115,7 @@ export function maskPhoneTail(phone: string | null | undefined) {
 }
 
 export type SalesRow = { source: string; payment_method: string; card_type: string | null; total_cents: number };
+export type SalesItemRow = { product_id: string | null; quantity: number; unit_price_cents: number };
 export const SALES_METHODS = ["pix", "credit", "debit", "cash"] as const;
 /** Une vendas do app (online) e do PDV (balcão/WhatsApp) e separa por meio de pagamento. */
 export function summarizeSales(rows: SalesRow[]) {
@@ -132,4 +133,22 @@ export function summarizeSales(rows: SalesRow[]) {
     total += r.total_cents;
   }
   return { totalCents: total, count: rows.length, byMethod, byChannel };
+}
+
+/** Soma o valor histórico dos itens vendidos; frete não entra no faturamento das categorias. */
+export function summarizeSalesByCategory(
+  rows: SalesItemRow[],
+  productCategories: Record<string, string | null>,
+  categoryNames: Record<string, string>,
+) {
+  const totals = new Map<string, { id: string; name: string; cents: number; quantity: number }>();
+  for (const row of rows) {
+    const categoryId = row.product_id ? productCategories[row.product_id] : null;
+    const id = categoryId && categoryNames[categoryId] ? categoryId : "sem-categoria";
+    const current = totals.get(id) ?? { id, name: id === "sem-categoria" ? "Sem categoria" : categoryNames[id]!, cents: 0, quantity: 0 };
+    current.cents += row.unit_price_cents * row.quantity;
+    current.quantity += row.quantity;
+    totals.set(id, current);
+  }
+  return [...totals.values()].sort((a, b) => b.cents - a.cents || a.name.localeCompare(b.name, "pt-BR"));
 }

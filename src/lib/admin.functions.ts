@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createAdminSession, endAdminSession, requireAdmin } from "./session.server";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { creditCashbackIfNeeded, transitionOrder } from "./orders.server";
-import { calcChange, normalizePhone, summarizeSales } from "./rules";
+import { calcChange, normalizePhone, summarizeSales, summarizeSalesByCategory } from "./rules";
 import { lookupCep, geocode } from "./geo.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -403,15 +403,33 @@ export const adminSalesReport = createServerFn({ method: "POST" })
   .inputValidator((d) => withToken({ from: z.string(), to: z.string() }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
-    const { data: rows } = await supabaseAdmin
-      .from("orders")
-      .select("source,payment_method,card_type,total_cents,delivery_fee_cents")
-      .neq("status", "cancelled")
-      .neq("status", "awaiting_payment")
-      .gte("created_at", data.from)
-      .lte("created_at", data.to)
-      .limit(20000);
-    return summarizeSales(rows ?? []);
+    const [sales, items, products, categories] = await Promise.all([
+      supabaseAdmin
+        .from("orders")
+        .select("source,payment_method,card_type,total_cents,delivery_fee_cents")
+        .neq("status", "cancelled")
+        .neq("status", "awaiting_payment")
+        .gte("created_at", data.from)
+        .lte("created_at", data.to)
+        .limit(20000),
+      supabaseAdmin
+        .from("order_items")
+        .select("product_id,quantity,unit_price_cents,orders!inner(created_at,status)")
+        .neq("orders.status", "cancelled")
+        .neq("orders.status", "awaiting_payment")
+        .gte("orders.created_at", data.from)
+        .lte("orders.created_at", data.to)
+        .limit(100000),
+      supabaseAdmin.from("products").select("id,category_id"),
+      supabaseAdmin.from("categories").select("id,name"),
+    ]);
+    if (sales.error || items.error || products.error || categories.error) throw new Error("Erro ao carregar o faturamento.");
+    const productCategories = Object.fromEntries((products.data ?? []).map((p) => [p.id, p.category_id]));
+    const categoryNames = Object.fromEntries((categories.data ?? []).map((c) => [c.id, c.name]));
+    return {
+      ...summarizeSales(sales.data ?? []),
+      byCategory: summarizeSalesByCategory(items.data ?? [], productCategories, categoryNames),
+    };
   });
 
 export const adminSetOrderEta = createServerFn({ method: "POST" })
