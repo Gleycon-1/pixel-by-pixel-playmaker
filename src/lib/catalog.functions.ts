@@ -29,6 +29,11 @@ export type PublicSettings = {
   eta_minutes: number;
   cashback_percent: number;
   free_delivery_min_cents: number;
+  logo_url: string | null;
+  banner_url: string | null;
+  banner_enabled: boolean;
+  button_color: string;
+  store_theme: "dark" | "light";
 };
 
 export type Category = { id: string; name: string; position: number; active: boolean };
@@ -89,6 +94,11 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
     eta_minutes: st.eta_minutes,
     cashback_percent: Number(st.cashback_percent),
     free_delivery_min_cents: st.free_delivery_min_cents,
+    logo_url: st.logo_url,
+    banner_url: st.banner_url,
+    banner_enabled: st.banner_enabled,
+    button_color: st.button_color,
+    store_theme: st.store_theme,
   };
   return { settings, categories: c.data as Category[], products: p.data as Product[] };
 });

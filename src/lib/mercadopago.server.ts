@@ -1,7 +1,13 @@
 const MP = "https://api.mercadopago.com";
 
-export function mpToken() {
-  return process.env["MERCADO_PAGO_ACCESS_TOKEN"] || null;
+export async function mpToken() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("payment_gateway_settings")
+    .select("access_token")
+    .eq("id", 1)
+    .maybeSingle();
+  return data?.access_token || process.env["MERCADO_PAGO_ACCESS_TOKEN"] || null;
 }
 
 export async function createPixOrder(input: {
@@ -9,7 +15,7 @@ export async function createPixOrder(input: {
   amountCents: number;
   payerEmail: string;
 }) {
-  const token = mpToken();
+  const token = await mpToken();
   if (!token) throw new Error("Pix online ainda não configurado pela loja.");
   const amount = (input.amountCents / 100).toFixed(2);
   const res = await fetch(`${MP}/v1/orders`, {
@@ -50,7 +56,7 @@ export async function createPixOrder(input: {
 
 /** Consulta a ordem diretamente na API (fonte da verdade, usada também para validar webhooks). */
 export async function fetchMpOrder(mpOrderId: string) {
-  const token = mpToken();
+  const token = await mpToken();
   if (!token) return null;
   const res = await fetch(`${MP}/v1/orders/${encodeURIComponent(mpOrderId)}`, {
     headers: { Authorization: `Bearer ${token}` },

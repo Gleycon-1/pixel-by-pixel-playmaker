@@ -203,6 +203,18 @@ export const adminCreateUploadUrl = createServerFn({ method: "POST" })
     return { path, uploadToken: signed.token, publicUrl: `/media/${path}` };
   });
 
+export const adminCreateStoreUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d) => withToken({ filename: z.string().min(1).max(200), kind: z.enum(["logo", "banner"]) }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.token);
+    const ext = (data.filename.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!["jpg", "jpeg", "png", "webp"].includes(ext)) throw new Error("Use uma imagem JPG, PNG ou WebP.");
+    const path = `store/${data.kind}-${crypto.randomUUID()}.${ext}`;
+    const { data: signed, error } = await supabaseAdmin.storage.from("product-images").createSignedUploadUrl(path);
+    if (error || !signed) throw new Error("Não foi possível preparar o envio da imagem.");
+    return { path, uploadToken: signed.token, publicUrl: `/media/${path}` };
+  });
+
 // ---------------- COURIERS ----------------
 export const adminCouriers = createServerFn({ method: "POST" })
   .inputValidator((d) => withToken({}).parse(d))
@@ -275,14 +287,20 @@ export const adminGetSettings = createServerFn({ method: "POST" })
   .inputValidator((d) => withToken({}).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
-    const { data: s } = await supabaseAdmin.from("store_settings").select("*").eq("id", 1).single();
+    const [{ data: s }, { data: vault }] = await Promise.all([
+      supabaseAdmin.from("store_settings").select("*").eq("id", 1).single(),
+      supabaseAdmin.from("payment_gateway_settings").select("environment,access_token,vault_password_hash").eq("id", 1).single(),
+    ]);
     if (!s) throw new Error("Configurações não encontradas.");
     return {
       ...s,
       raio_maximo_km: Number(s.raio_maximo_km),
       limite_km_taxa_fixa: Number(s.limite_km_taxa_fixa),
       cashback_percent: Number(s.cashback_percent),
-      mp_configured: !!process.env["MERCADO_PAGO_ACCESS_TOKEN"],
+      mp_configured: !!vault?.access_token || !!process.env["MERCADO_PAGO_ACCESS_TOKEN"],
+      payment_environment: vault?.environment ?? "test",
+      payment_token_saved: !!vault?.access_token,
+      payment_password_set: !!vault?.vault_password_hash,
     };
   });
 
@@ -316,6 +334,11 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
       eta_minutes: z.number().int().min(5).max(300),
       cashback_percent: z.number().min(0).max(50),
       free_delivery_min_cents: z.number().int().min(0).max(10_000_000),
+      logo_url: opt(500),
+      banner_url: opt(500),
+      banner_enabled: z.boolean(),
+      button_color: z.string().regex(/^\d{1,3} \d{1,3}% \d{1,3}%$/),
+      store_theme: z.enum(["dark", "light"]),
     }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -343,6 +366,9 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
       patch.origin_cep = addr.cep;
       patch.origin_lat = pos.lat;
       patch.origin_lng = pos.lng;
+    }
+    if (!/^(\d|[1-9]\d|[12]\d\d|3[0-5]\d|360) ([0-9]|[1-9]\d|100)% ([0-9]|[1-9]\d|100)%$/.test(row.button_color)) {
+      throw new Error("Cor dos botões inválida.");
     }
     const { error } = await supabaseAdmin.from("store_settings").update(patch).eq("id", 1);
     if (error) throw new Error("Erro ao salvar configurações.");

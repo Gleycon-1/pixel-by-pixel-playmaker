@@ -8,9 +8,13 @@ import { Switch } from "@/components/ui/switch";
 import { adminChangePassword, adminGetSettings, adminSaveSettings } from "@/lib/admin.functions";
 import { centsToInput, maskCep, parseMoneyInput } from "@/lib/format";
 import { useAdmin } from "./use-admin";
+import { IdentitySettings } from "./IdentitySettings";
+import { PaymentVaultPanel } from "./PaymentVaultPanel";
 
 type S = Awaited<ReturnType<typeof adminGetSettings>>;
 type Form = Record<string, string | boolean>;
+
+const tIdentity = (value: string | boolean | undefined) => typeof value === "string" && value ? value : null;
 
 const TEXT: [keyof S, string][] = [
   ["store_name", "Nome da adega"],
@@ -57,6 +61,11 @@ export function SettingsPanel() {
       pix_test_mode: s.pix_test_mode,
       featured_enabled: s.featured_enabled,
       require_delivery_pin: s.require_delivery_pin,
+      logo_url: s.logo_url ?? "",
+      banner_url: s.banner_url ?? "",
+      banner_enabled: s.banner_enabled,
+      button_color: s.button_color,
+      store_theme: s.store_theme,
     });
     setF(form);
   }, [q.data, f]);
@@ -99,6 +108,11 @@ export function SettingsPanel() {
             pix_test_mode: !!f["pix_test_mode"],
             featured_enabled: !!f["featured_enabled"],
             require_delivery_pin: !!f["require_delivery_pin"],
+            logo_url: t("logo_url"),
+            banner_url: t("banner_url"),
+            banner_enabled: !!f["banner_enabled"],
+            button_color: str("button_color"),
+            store_theme: str("store_theme") as "dark" | "light",
           },
         }),
       "Configurações salvas!",
@@ -121,6 +135,24 @@ export function SettingsPanel() {
 
   return (
     <div className="grid gap-4 pt-2 lg:grid-cols-2">
+      <IdentitySettings
+        values={{
+          logo_url: tIdentity(f["logo_url"]),
+          banner_url: tIdentity(f["banner_url"]),
+          banner_enabled: !!f["banner_enabled"],
+          button_color: str("button_color"),
+          store_theme: str("store_theme") === "light" ? "light" : "dark",
+        }}
+        onChange={(patch) => {
+          const { logo_url, banner_url, ...rest } = patch;
+          setF({
+            ...f,
+            ...rest,
+            ...(logo_url !== undefined ? { logo_url: logo_url ?? "" } : {}),
+            ...(banner_url !== undefined ? { banner_url: banner_url ?? "" } : {}),
+          });
+        }}
+      />
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <h2 className="font-display text-lg font-extrabold">Operação</h2>
         <div className="grid grid-cols-3 gap-1">
@@ -160,6 +192,12 @@ export function SettingsPanel() {
         {TEXT.map(([k, label]) => field(k as string, label))}
       </section>
 
+      <PaymentVaultPanel
+        configured={q.data.mp_configured}
+        tokenSaved={q.data.payment_token_saved}
+        passwordSet={q.data.payment_password_set}
+        initialEnvironment={q.data.payment_environment}
+      />
       <div className="flex flex-wrap items-end gap-3 lg:col-span-2">
         <Button size="lg" onClick={submit}>Salvar configurações</Button>
         <div className="ml-auto flex items-end gap-2">

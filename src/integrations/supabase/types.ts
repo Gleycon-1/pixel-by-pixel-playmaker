@@ -428,6 +428,33 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_settings: {
+        Row: {
+          access_token: string | null
+          environment: string
+          id: number
+          provider: string
+          updated_at: string
+          vault_password_hash: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          environment?: string
+          id?: number
+          provider?: string
+          updated_at?: string
+          vault_password_hash?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          environment?: string
+          id?: number
+          provider?: string
+          updated_at?: string
+          vault_password_hash?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           available: boolean
@@ -488,6 +515,9 @@ export type Database = {
           accept_pix: boolean
           address_text: string | null
           allow_pickup: boolean
+          banner_enabled: boolean
+          banner_url: string | null
+          button_color: string
           cashback_percent: number
           close_time: string
           eta_minutes: number
@@ -498,6 +528,7 @@ export type Database = {
           instagram_url: string | null
           instagram_user: string | null
           limite_km_taxa_fixa: number
+          logo_url: string | null
           open_time: string
           origin_cep: string
           origin_lat: number | null
@@ -508,6 +539,7 @@ export type Database = {
           store_mode: string
           store_name: string | null
           store_open: boolean
+          store_theme: string
           tagline: string | null
           updated_at: string
           valor_por_km_adicional_cents: number
@@ -521,6 +553,9 @@ export type Database = {
           accept_pix?: boolean
           address_text?: string | null
           allow_pickup?: boolean
+          banner_enabled?: boolean
+          banner_url?: string | null
+          button_color?: string
           cashback_percent?: number
           close_time?: string
           eta_minutes?: number
@@ -531,6 +566,7 @@ export type Database = {
           instagram_url?: string | null
           instagram_user?: string | null
           limite_km_taxa_fixa?: number
+          logo_url?: string | null
           open_time?: string
           origin_cep?: string
           origin_lat?: number | null
@@ -541,6 +577,7 @@ export type Database = {
           store_mode?: string
           store_name?: string | null
           store_open?: boolean
+          store_theme?: string
           tagline?: string | null
           updated_at?: string
           valor_por_km_adicional_cents?: number
@@ -554,6 +591,9 @@ export type Database = {
           accept_pix?: boolean
           address_text?: string | null
           allow_pickup?: boolean
+          banner_enabled?: boolean
+          banner_url?: string | null
+          button_color?: string
           cashback_percent?: number
           close_time?: string
           eta_minutes?: number
@@ -564,6 +604,7 @@ export type Database = {
           instagram_url?: string | null
           instagram_user?: string | null
           limite_km_taxa_fixa?: number
+          logo_url?: string | null
           open_time?: string
           origin_cep?: string
           origin_lat?: number | null
@@ -574,6 +615,7 @@ export type Database = {
           store_mode?: string
           store_name?: string | null
           store_open?: boolean
+          store_theme?: string
           tagline?: string | null
           updated_at?: string
           valor_por_km_adicional_cents?: number
@@ -605,6 +647,19 @@ export type Database = {
       }
       decrement_stock: {
         Args: { p_product: string; p_qty: number }
+        Returns: undefined
+      }
+      payment_vault_reveal: { Args: { p_password: string }; Returns: string }
+      payment_vault_save: {
+        Args: {
+          p_access_token: string
+          p_environment: string
+          p_password: string
+        }
+        Returns: undefined
+      }
+      payment_vault_set_password: {
+        Args: { p_current: string; p_new: string }
         Returns: undefined
       }
     }

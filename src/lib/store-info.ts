@@ -7,8 +7,8 @@ export function storeInfo(s?: Partial<PublicSettings> | null) {
   return {
     name: s?.store_name || STORE_CONFIG.storeName,
     tagline: s?.tagline || STORE_CONFIG.tagline,
-    logoUrl: STORE_CONFIG.logoUrl,
-    bannerUrl: STORE_CONFIG.headerBannerUrl,
+    logoUrl: s?.logo_url || STORE_CONFIG.logoUrl,
+    bannerUrl: s?.banner_url || STORE_CONFIG.headerBannerUrl,
     whatsappNumber: s?.whatsapp_number || c.whatsappNumber,
     whatsappDisplay: s?.whatsapp_display || c.whatsappDisplay,
     instagramUrl: s?.instagram_url || c.instagramUrl,
