@@ -52,7 +52,8 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
   const [s, c, p] = await Promise.all([
     supabaseAdmin.from("store_settings").select("*").eq("id", 1).single(),
     db.from("categories").select("id,name,position,active").eq("active", true).order("position"),
-    db
+    // Products are read server-side with a fixed column list so sold-out items still show as "Esgotado".
+    supabaseAdmin
       .from("products")
       .select("id,category_id,name,description,price_cents,image_url,featured,available,position,stock")
       .order("position"),
