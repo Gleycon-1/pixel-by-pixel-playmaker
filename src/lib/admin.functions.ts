@@ -5,6 +5,7 @@ import { createAdminSession, endAdminSession, requireAdmin } from "./session.ser
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { creditCashbackIfNeeded, transitionOrder } from "./orders.server";
 import { calcChange, normalizePhone, summarizeSales, summarizeSalesByCategory } from "./rules";
+import { strongAdminPasswordSchema } from "./admin-password";
 import { lookupCep, geocode } from "./geo.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -43,9 +44,21 @@ export const adminCheck = createServerFn({ method: "POST" })
   });
 
 export const adminChangePassword = createServerFn({ method: "POST" })
-  .inputValidator((d) => withToken({ newPassword: z.string().min(8).max(100).refine((v) => v !== "adega2026", "Escolha uma senha diferente da inicial.") }).parse(d))
+  .inputValidator((d) =>
+    withToken({
+      currentPassword: z.string().min(1, "Informe a senha atual do painel.").max(100),
+      newPassword: strongAdminPasswordSchema,
+    }).parse(d),
+  )
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
+    const { data: verification, error: verificationError } = await supabaseAdmin.rpc("admin_verify_password", {
+      p_password: data.currentPassword,
+    });
+    if (verificationError) throw new Error("Não foi possível validar a senha atual.");
+    const result = verification as { status: string };
+    if (result.status === "locked") throw new Error("Muitas tentativas. Aguarde 15 minutos.");
+    if (result.status !== "ok") throw new Error("A senha atual do painel está incorreta.");
     const { error } = await supabaseAdmin.rpc("admin_set_password", { p_password: data.newPassword });
     if (error) throw new Error("Não foi possível alterar a senha.");
     return { ok: true };

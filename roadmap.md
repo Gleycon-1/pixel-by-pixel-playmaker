@@ -19,3 +19,6 @@
 - [x] Conferência e validação do WhatsApp no primeiro cadastro
 - [x] Compartilhar loja e assinatura no rodapé
 - [x] PDV preserva rolagem e ganha botão + rápido nos cards
+## Senha do painel administrativo
+- [ ] Enviar senha atual e nova senha com validação forte, sem tocar no cofre do Mercado Pago
+- [ ] Testar troca com senha forte e restaurar a senha original

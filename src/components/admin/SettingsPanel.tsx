@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Check, Circle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { adminChangePassword, adminGetSettings, adminSaveSettings } from "@/lib/admin.functions";
 import { centsToInput, maskCep, parseMoneyInput } from "@/lib/format";
+import { ADMIN_PASSWORD_REQUIREMENTS, isStrongAdminPassword } from "@/lib/admin-password";
 import { useAdmin } from "./use-admin";
 import { IdentitySettings } from "./IdentitySettings";
 import { PaymentVaultPanel } from "./PaymentVaultPanel";
@@ -35,7 +38,11 @@ export function SettingsPanel() {
   const changePwd = useServerFn(adminChangePassword);
   const q = useQuery({ queryKey: ["admin-settings"], queryFn: () => get({ data: { token } }) });
   const [f, setF] = useState<Form | null>(null);
+  const [currentPwd, setCurrentPwd] = useState("");
   const [pwd, setPwd] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [pwdBusy, setPwdBusy] = useState(false);
+  const { setToken, handleError } = useAdmin();
 
   useEffect(() => {
     const s = q.data;
@@ -198,12 +205,63 @@ export function SettingsPanel() {
         passwordSet={q.data.payment_password_set}
         initialEnvironment={q.data.payment_environment}
       />
-      <div className="flex flex-wrap items-end gap-3 lg:col-span-2">
+      <div className="flex flex-wrap items-start gap-3 lg:col-span-2">
         <Button size="lg" onClick={submit}>Salvar configurações</Button>
-        <div className="ml-auto flex items-end gap-2">
-          <div><Label htmlFor="newpwd">Nova senha do painel</Label><Input id="newpwd" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} /></div>
-          <Button variant="outline" disabled={pwd.length < 6} onClick={async () => (await run(() => changePwd({ data: { token, newPassword: pwd } }), "Senha alterada!")) && setPwd("")}>Alterar</Button>
-        </div>
+        <form
+          className="ml-auto w-full max-w-md space-y-3 rounded-2xl border border-border bg-card p-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setPwdError("");
+            if (!currentPwd) {
+              setPwdError("Informe a senha atual do painel.");
+              return;
+            }
+            if (!isStrongAdminPassword(pwd)) {
+              setPwdError("A nova senha ainda não atende a todos os requisitos abaixo.");
+              return;
+            }
+            setPwdBusy(true);
+            try {
+              await changePwd({ data: { token, currentPassword: currentPwd, newPassword: pwd } });
+              setCurrentPwd("");
+              setPwd("");
+              toast.success("Senha alterada! Entre novamente com a nova senha.");
+              setToken(null);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Não foi possível alterar a senha.";
+              setPwdError(message);
+              handleError(error);
+            } finally {
+              setPwdBusy(false);
+            }
+          }}
+        >
+          <h2 className="font-display text-lg font-extrabold">Senha de acesso ao painel</h2>
+          <div>
+            <Label htmlFor="currentpwd">Senha atual</Label>
+            <Input id="currentpwd" type="password" autoComplete="current-password" value={currentPwd} onChange={(event) => { setCurrentPwd(event.target.value); setPwdError(""); }} />
+          </div>
+          <div>
+            <Label htmlFor="newpwd">Nova senha do painel</Label>
+            <Input id="newpwd" type="password" autoComplete="new-password" value={pwd} onChange={(event) => { setPwd(event.target.value); setPwdError(""); }} aria-describedby="admin-password-requirements" />
+          </div>
+          <ul id="admin-password-requirements" className="space-y-1 text-xs" aria-live="polite">
+            {ADMIN_PASSWORD_REQUIREMENTS.map((requirement) => {
+              const met = requirement.test(pwd);
+              return (
+                <li key={requirement.key} className={`flex items-center gap-2 ${met ? "text-success" : "text-muted-foreground"}`}>
+                  {met ? <Check className="size-3.5" aria-hidden="true" /> : <Circle className="size-3.5" aria-hidden="true" />}
+                  <span>{requirement.label}</span>
+                  <span className="sr-only">{met ? "atendido" : "pendente"}</span>
+                </li>
+              );
+            })}
+          </ul>
+          {pwdError && <p role="alert" className="rounded-lg bg-destructive/10 p-2 text-sm text-destructive">{pwdError}</p>}
+          <Button type="submit" variant="outline" disabled={pwdBusy || !currentPwd || !isStrongAdminPassword(pwd)}>
+            {pwdBusy && <Loader2 className="animate-spin" />} Alterar senha do painel
+          </Button>
+        </form>
       </div>
     </div>
   );
