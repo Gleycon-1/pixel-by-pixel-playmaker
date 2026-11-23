@@ -297,6 +297,7 @@ export const adminGetSettings = createServerFn({ method: "POST" })
       raio_maximo_km: Number(s.raio_maximo_km),
       limite_km_taxa_fixa: Number(s.limite_km_taxa_fixa),
       cashback_percent: Number(s.cashback_percent),
+      store_theme: s.store_theme === "light" ? ("light" as const) : ("dark" as const),
       mp_configured: !!vault?.access_token || !!process.env["MERCADO_PAGO_ACCESS_TOKEN"],
       payment_environment: vault?.environment ?? "test",
       payment_token_saved: !!vault?.access_token,

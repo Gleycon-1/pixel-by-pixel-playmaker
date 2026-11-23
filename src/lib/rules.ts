@@ -98,6 +98,16 @@ export function normalizePhone(input: string): string | null {
   return d;
 }
 
+/** Primeiro cadastro: celular brasileiro com DDD, sem repetições óbvias. */
+export function normalizeMobilePhone(input: string): string | null {
+  const normalized = normalizePhone(input);
+  if (!normalized) return null;
+  const local = normalized.slice(2);
+  if (!/^[1-9][1-9]9\d{8}$/.test(local)) return null;
+  if (/^(\d)\1{10}$/.test(local) || /^(\d)\1{8}$/.test(local.slice(2))) return null;
+  return normalized;
+}
+
 /** PIN de entrega: últimos 4 dígitos do celular do cliente. */
 export function deliveryPin(phone: string | null | undefined) {
   const d = (phone ?? "").replace(/\D/g, "");

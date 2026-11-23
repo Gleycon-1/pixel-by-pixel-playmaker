@@ -11,6 +11,7 @@
 @theme inline {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Bricolage Grotesque", "Manrope", ui-sans-serif, sans-serif;
+  --font-signature: "Cormorant Garamond", Georgia, serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -122,6 +123,9 @@
     color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
   }
+  html:has(.store-theme-light) {
+    color-scheme: light;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -132,6 +136,11 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+}
+
+/* Em cores de botão muito claras, mantém preços e ícones legíveis no tema claro. */
+.store-theme-light .text-primary {
+  color: var(--primary-accessible, var(--store-primary));
 }
 
 @utility no-scrollbar {

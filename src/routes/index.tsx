@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { MapPin, RotateCcw, Sparkles, Wallet } from "lucide-react";
+import { MapPin, RotateCcw, Share2, Sparkles, Wallet } from "lucide-react";
 import { useMemo } from "react";
 import { catalogQuery } from "@/lib/catalog.functions";
 import { storeInfo, waLink } from "@/lib/store-info";
@@ -14,6 +14,7 @@ import { useMe } from "@/hooks/use-customer";
 import { useCart } from "@/stores/cart";
 import { money } from "@/lib/format";
 import { toast } from "sonner";
+import { StoreThemeStyle } from "@/components/store/StoreThemeStyle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,6 +36,24 @@ function Home() {
   const { settings, categories, products } = data;
   const info = storeInfo(settings);
 
+  const shareStore = async () => {
+    const shareData = { title: info.name, text: `${info.name} — ${info.tagline}`, url: window.location.origin };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.origin);
+      toast.success("Link da loja copiado!");
+    } catch {
+      toast.error("Não foi possível copiar o link.");
+    }
+  };
+
   const featured = useMemo(() => products.filter((p) => p.featured), [products]);
   const sections = useMemo(
     () =>
@@ -45,18 +64,21 @@ function Home() {
   );
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className={`min-h-screen pb-32 ${settings.store_theme === "light" ? "store-theme-light" : ""}`}>
+      <StoreThemeStyle settings={settings} />
       <StoreHeader name={info.name} logoUrl={info.logoUrl} />
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <img
-          src={info.bannerUrl}
-          alt=""
-          width={1600}
-          height={800}
-          className="absolute inset-0 size-full object-cover"
-        />
+        {settings.banner_enabled && (
+          <img
+            src={info.bannerUrl}
+            alt=""
+            width={1600}
+            height={800}
+            className="absolute inset-0 size-full object-cover"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-hero" />
         <div className="relative mx-auto flex max-w-5xl flex-col gap-4 px-4 pb-6 pt-24 sm:pt-36">
           <span
@@ -95,6 +117,14 @@ function Home() {
             >
               <MapPin className="size-4 text-primary" /> {info.addressText}
             </a>
+            <button
+              type="button"
+              onClick={shareStore}
+              className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-2.5 text-sm font-semibold backdrop-blur transition-colors hover:border-primary"
+              aria-label="Compartilhar loja"
+            >
+              <Share2 className="size-4 text-primary" /> Compartilhar
+            </button>
           </div>
         </div>
       </section>
@@ -163,6 +193,9 @@ function Home() {
           <Link to="/admin" className="hover:text-foreground">
             Área do lojista
           </Link>
+        </p>
+        <p className="border-t border-border pb-2 pt-5 text-center font-signature text-xl font-medium italic text-foreground/75">
+          Feito por Gleycon Paula da Silva
         </p>
       </footer>
 

@@ -40,12 +40,13 @@ export function PdvPanel() {
     (p) => p.available && (!catId || p.category_id === catId) && (p.name.toLowerCase().includes(term) || (!!p.barcode && p.barcode.includes(term))),
   );
   const searchRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   // Campo de busca sempre focado para capturar o leitor de código de barras
   useEffect(() => {
     const t = setInterval(() => {
       const el = document.activeElement;
       if (el && el !== document.body && el !== searchRef.current && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.getAttribute("role") === "dialog")) return;
-      searchRef.current?.focus();
+      searchRef.current?.focus({ preventScroll: true });
     }, 500);
     return () => clearInterval(t);
   }, []);
@@ -78,7 +79,8 @@ export function PdvPanel() {
   const change = payment === "cash" && givenCents > 0 ? calcChange(total, givenCents) : 0;
   const cashback = phone.replace(/\D/g, "").length >= 10 ? calcCashback(subtotal, settings.data?.cashback_percent ?? 2) : 0;
 
-  const add = (id: string, d: number) =>
+  const add = (id: string, d: number) => {
+    const scroll = { x: window.scrollX, y: window.scrollY, left: gridRef.current?.scrollLeft ?? 0, top: gridRef.current?.scrollTop ?? 0 };
     setCart((c) => {
       const p = products.find((x) => x.id === id);
       const n = Math.max(0, (c[id] ?? 0) + d);
@@ -91,6 +93,15 @@ export function PdvPanel() {
       else next[id] = n;
       return next;
     });
+    requestAnimationFrame(() => {
+      window.scrollTo(scroll.x, scroll.y);
+      if (gridRef.current) {
+        gridRef.current.scrollLeft = scroll.left;
+        gridRef.current.scrollTop = scroll.top;
+      }
+      searchRef.current?.focus({ preventScroll: true });
+    });
+  };
 
   const finish = async () => {
     setBusy(true);
@@ -155,19 +166,42 @@ export function PdvPanel() {
             <Button key={c.id} size="sm" variant={catId === c.id ? "default" : "outline"} onClick={() => setCatId(c.id)}>{c.name}</Button>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+        <div ref={gridRef} className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
           {filtered.map((p) => (
-            <button
+            <div
               key={p.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Adicionar ${p.name}`}
               onClick={() => add(p.id, 1)}
-              className="relative rounded-xl border border-border bg-card p-2 text-left transition hover:border-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  add(p.id, 1);
+                }
+              }}
+              className="relative cursor-pointer rounded-xl border border-border bg-card p-2 text-left transition select-none hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {p.image_url && <img src={p.image_url} alt="" className="aspect-square w-full rounded-lg object-cover" loading="lazy" />}
+              <div className="relative">
+                {p.image_url ? <img src={p.image_url} alt="" className="aspect-square w-full rounded-lg object-cover" loading="lazy" /> : <div className="aspect-square w-full rounded-lg bg-muted" />}
+                <Button
+                  type="button"
+                  size="icon"
+                  className="absolute bottom-2 right-2 size-11 rounded-full shadow-lg"
+                  aria-label={`Adicionar rapidamente ${p.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    add(p.id, 1);
+                  }}
+                >
+                  <Plus className="size-6" />
+                </Button>
+              </div>
               <p className="mt-1 line-clamp-2 text-sm font-bold">{p.name}</p>
               <p className="text-sm font-extrabold text-primary">{money(p.price_cents)}</p>
               {p.stock != null && <p className="text-[11px] text-muted-foreground">Estoque: {p.stock}</p>}
               {cart[p.id] && <span className="absolute right-2 top-2 rounded-full bg-primary px-2 text-xs font-extrabold text-primary-foreground">{cart[p.id]}</span>}
-            </button>
+            </div>
           ))}
         </div>
       </div>

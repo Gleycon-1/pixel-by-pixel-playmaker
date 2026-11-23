@@ -98,7 +98,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
     banner_url: st.banner_url,
     banner_enabled: st.banner_enabled,
     button_color: st.button_color,
-    store_theme: st.store_theme,
+    store_theme: st.store_theme === "light" ? "light" : "dark",
   };
   return { settings, categories: c.data as Category[], products: p.data as Product[] };
 });

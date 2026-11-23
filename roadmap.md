@@ -14,8 +14,8 @@
 - [x] Consolidar Delivery + PDV por dia, mês e ano e por forma de pagamento
 - [x] Detalhar faturamento por categoria de produto no período selecionado
 ## Autonomia visual, Pix e usabilidade
-- [ ] Logo, banner, cor livre dos botões e tema claro/escuro configuráveis
-- [ ] Cofre protegido do token Mercado Pago com ambiente e senha própria
-- [ ] Conferência e validação do WhatsApp no primeiro cadastro
-- [ ] Compartilhar loja e assinatura no rodapé
-- [ ] PDV preserva rolagem e ganha botão + rápido nos cards
+- [x] Logo, banner, cor livre dos botões e tema claro/escuro configuráveis
+- [x] Cofre protegido do token Mercado Pago com ambiente e senha própria
+- [x] Conferência e validação do WhatsApp no primeiro cadastro
+- [x] Compartilhar loja e assinatura no rodapé
+- [x] PDV preserva rolagem e ganha botão + rápido nos cards

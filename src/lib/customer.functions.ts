@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createCustomerSession, endCustomerSession, requireCustomer } from "./session.server";
-import { normalizePhone } from "./rules";
+import { normalizeMobilePhone, normalizePhone } from "./rules";
 import { ORDER_SELECT, type OrderDTO } from "./order-dto";
 import { lookupCep } from "./geo.server";
 import { addressSchema } from "./schemas";
@@ -23,7 +23,8 @@ export const registerCustomer = createServerFn({ method: "POST" })
     z.object({ phone: phoneSchema, name: z.string().trim().min(2).max(80), pin: pinSchema }).parse(d),
   )
   .handler(async ({ data }) => {
-    const phone = phoneOrThrow(data.phone);
+    const phone = normalizeMobilePhone(data.phone);
+    if (!phone) throw new Error("Digite um celular brasileiro válido, com DDD e sem números repetidos.");
     const { data: id, error } = await supabaseAdmin.rpc("customer_register", {
       p_phone: phone,
       p_name: data.name,

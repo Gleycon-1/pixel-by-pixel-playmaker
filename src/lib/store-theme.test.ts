@@ -12,6 +12,7 @@ describe("aparência da loja", () => {
   it("usa texto escuro em botão claro e texto claro em botão escuro", () => {
     expect(buttonForeground("0 0% 100%")).toBe("hsl(222 47% 11%)");
     expect(buttonForeground("0 0% 0%")).toBe("hsl(0 0% 100%)");
+    expect(dynamicStoreThemeCss({ button_color: "215 20% 100%", store_theme: "light" })).toContain("--primary-accessible:hsl(222 47% 11%)");
   });
 
   it("usa cinza-gelo no tema claro, nunca branco puro como fundo", () => {

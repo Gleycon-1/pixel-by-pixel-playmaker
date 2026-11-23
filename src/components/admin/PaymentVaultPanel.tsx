@@ -14,7 +14,7 @@ export function PaymentVaultPanel({ configured, tokenSaved, passwordSet, initial
   const qc = useQueryClient();
   const reveal = useServerFn(adminRevealPaymentToken);
   const save = useServerFn(adminSavePaymentToken);
-  const setPassword = useServerFn(adminSetPaymentVaultPassword);
+  const changeVaultPassword = useServerFn(adminSetPaymentVaultPassword);
   const [environment, setEnvironment] = useState<"test" | "production">(initialEnvironment === "production" ? "production" : "test");
   const [password, setPassword] = useState("");
   const [accessToken, setAccessToken] = useState("");
@@ -58,7 +58,7 @@ export function PaymentVaultPanel({ configured, tokenSaved, passwordSet, initial
     if (newPassword !== confirmPassword) return;
     setBusy(true);
     const result = await run(
-      () => setPassword({ data: { token, currentPassword: passwordSet ? currentPassword : null, newPassword } }),
+      () => changeVaultPassword({ data: { token, currentPassword: passwordSet ? currentPassword : null, newPassword } }),
       passwordSet ? "Senha do token alterada." : "Senha exclusiva do cofre criada.",
     );
     setBusy(false);

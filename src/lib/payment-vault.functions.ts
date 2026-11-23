@@ -43,9 +43,9 @@ export const adminSetPaymentVaultPassword = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
     const { error } = await supabaseAdmin.rpc("payment_vault_set_password", {
-      p_current: data.currentPassword,
+      p_current: data.currentPassword ?? "",
       p_new: data.newPassword,
     });
-    if (error) throw new Error(error.message.includes("caracteres") ? error.message : "Senha atual do cofre incorreta.");
+    if (error) throw new Error(error.message);
     return { ok: true };
   });

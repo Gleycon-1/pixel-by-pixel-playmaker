@@ -50,6 +50,13 @@
       "when": 1795316460238,
       "tag": "0006_store_identity_and_private_payment_vault",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795394199539,
+      "tag": "0007_fix_payment_vault_crypto_schema",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { normalizePhone } from "@/lib/rules";
+import { normalizeMobilePhone, normalizePhone } from "@/lib/rules";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -106,8 +106,19 @@ function LoginPage() {
     }
   };
 
+  const startRegistration = () => {
+    setError(null);
+    if (!normalizeMobilePhone(normalized)) {
+      setError("Digite um celular brasileiro válido, com DDD e sem sequências repetidas.");
+      return;
+    }
+    setStep("register");
+    setPin("");
+  };
+
   const submitRegister = async () => {
     setError(null);
+    if (!normalizeMobilePhone(normalized)) return setError("Digite um celular brasileiro válido, com DDD e sem sequências repetidas.");
     if (name.trim().length < 2) return setError("Informe seu nome.");
     if (pin.length !== 4) return setError("Crie um PIN de 4 números.");
     if (pin !== pin2) return setError("Os PINs não conferem.");
@@ -175,7 +186,7 @@ function LoginPage() {
             <Button type="submit" variant="hero" size="xl" className="w-full" disabled={busy || pin.length !== 4}>
               {busy ? <Loader2 className="animate-spin" /> : "Entrar"}
             </Button>
-            <button type="button" className="text-sm font-bold text-primary underline" onClick={() => { setStep("register"); setPin(""); setError(null); }}>
+            <button type="button" className="text-sm font-bold text-primary underline" onClick={startRegistration}>
               Primeiro acesso? Criar cadastro
             </button>
             <button type="button" className="text-sm text-muted-foreground underline" onClick={() => { setStep("phone"); setPin(""); setError(null); }}>
@@ -192,6 +203,13 @@ function LoginPage() {
               void submitRegister();
             }}
           >
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Confira seu WhatsApp</p>
+              <p className="mt-1 text-xl font-extrabold text-primary">{phoneDisplay(normalized)}</p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                Digite o seu número real de WhatsApp (com DDD) — ele será usado para acompanhar o pedido e confirmar a entrega. Não enviaremos código.
+              </p>
+            </div>
             <div className="space-y-1.5">
               <label className="text-sm font-semibold">Seu nome</label>
               <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Como podemos te chamar?" className="h-12 rounded-xl" maxLength={80} />

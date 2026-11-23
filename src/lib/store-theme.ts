@@ -49,6 +49,7 @@ export function dynamicStoreThemeCss(settings: StoreAppearance) {
     `--store-primary:hsl(${color})`,
     `--primary-foreground:${foreground}`,
     `--sidebar-primary-foreground:${foreground}`,
+    light && foreground.startsWith("hsl(222") ? "--primary-accessible:hsl(222 47% 11%)" : "--primary-accessible:var(--store-primary)",
     light ? "--store-bg:#F3F4F6" : "",
     light ? "--store-card-bg:#E5E7EB" : "",
     light ? "--foreground:hsl(222 47% 11%)" : "",
